@@ -52,7 +52,7 @@ cvrp_app/
 
 1. Tải mã nguồn:
 ```bash
-git clone https://github.com/yourusername/cvrp_simulator.git
+git clone https://github.com/AnhQu4nn/cvrp_simulator.git
 cd cvrp_simulator
 ```
 
