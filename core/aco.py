@@ -1,28 +1,34 @@
 """
-Ant Colony Optimization Algorithm for CVRP
+Thuật toán Ant Colony Optimization cải tiến cho bài toán CVRP
+(Capacitated Vehicle Routing Problem)
 """
 
 import numpy as np
 import random
 import time
 import threading
+import copy
 
 
 class ACO_CVRP:
-    """Ant Colony Optimization for Capacitated Vehicle Routing Problem"""
+    """Thuật toán Ant Colony Optimization cho bài toán Định tuyến Phương tiện có Giới hạn Tải trọng (CVRP)"""
 
-    def __init__(self, cvrp, num_ants=10, alpha=1.0, beta=2.0, rho=0.5, q=100, max_iterations=100):
+    def __init__(self, cvrp, num_ants=20, alpha=1.0, beta=2.0, rho=0.5, q=100, max_iterations=100,
+                 min_max_aco=False, local_search=False, elitist_ants=0):
         """
-        Initialize ACO algorithm for CVRP
+        Khởi tạo thuật toán ACO cho CVRP
 
-        Parameters:
-        cvrp -- CVRP object
-        num_ants -- Number of ants
-        alpha -- Pheromone importance
-        beta -- Heuristic importance
-        rho -- Pheromone evaporation rate
-        q -- Pheromone deposit factor
-        max_iterations -- Maximum number of iterations
+        Tham số:
+        cvrp -- Đối tượng CVRP
+        num_ants -- Số lượng kiến
+        alpha -- Tầm quan trọng của pheromone
+        beta -- Tầm quan trọng của heuristic
+        rho -- Tỷ lệ bay hơi pheromone
+        q -- Hệ số lượng pheromone thả
+        max_iterations -- Số vòng lặp tối đa
+        min_max_aco -- Sử dụng biến thể MIN-MAX Ant System
+        local_search -- Sử dụng tìm kiếm cục bộ
+        elitist_ants -- Số lượng kiến ưu tú
         """
         self.cvrp = cvrp
         self.num_ants = num_ants
@@ -31,74 +37,134 @@ class ACO_CVRP:
         self.rho = rho
         self.q = q
         self.max_iterations = max_iterations
+        self.min_max_aco = min_max_aco
+        self.local_search = local_search
+        self.elitist_ants = elitist_ants
 
-        # Number of customers
+        # Số lượng khách hàng
         self.n = len(cvrp.customers)
 
-        # Initialize pheromone matrix
+        # Khởi tạo ma trận pheromone
         self.pheromone = np.ones((self.n, self.n))
 
-        # Initialize heuristic matrix (inverse of distance)
+        # Khởi tạo giá trị pheromone tối thiểu và tối đa (cho MIN-MAX ACO)
+        self.max_pheromone = 1.0
+        self.min_pheromone = 0.1
+
+        # Khởi tạo ma trận heuristic (nghịch đảo của khoảng cách)
         self.heuristic = np.zeros((self.n, self.n))
         for i in range(self.n):
             for j in range(self.n):
                 if i != j and cvrp.distances[i, j] > 0:
                     self.heuristic[i, j] = 1.0 / cvrp.distances[i, j]
 
-        # Save results
+        # Lưu kết quả
         self.best_solution = None
         self.best_cost = float('inf')
+        self.best_iteration = 0
 
-        # Status for visualization
+        # Trạng thái cho trực quan hóa
         self.current_solution = None
         self.current_cost = float('inf')
+        self.current_iteration = 0
 
-        # Cost history
+        # Lịch sử chi phí
         self.cost_history = []
+        self.avg_cost_history = []
+        self.worst_cost_history = []
+        self.pheromone_stats_history = []
 
-        # Stop flag
+        # Cờ dừng và tạm dừng
         self.stop_flag = False
+        self.paused = False
+        self.pause_condition = threading.Condition()
+        self.was_stopped = False
 
     def run(self, callback=None, step_callback=None):
         """
-        Run the ACO algorithm
+        Chạy thuật toán ACO
 
-        Parameters:
-        callback -- Function to call when finished
-        step_callback -- Function to call after each iteration
+        Tham số:
+        callback -- Hàm gọi lại khi hoàn thành
+        step_callback -- Hàm gọi lại sau mỗi vòng lặp
         """
         self.stop_flag = False
+        self.was_stopped = False
         self.best_solution = None
         self.best_cost = float('inf')
+        self.best_iteration = 0
         self.cost_history = []
+        self.avg_cost_history = []
+        self.worst_cost_history = []
+        self.pheromone_stats_history = []
+        self.time_history = []
+
+        # Nếu sử dụng MIN-MAX ACO, khởi tạo giá trị pheromone tối đa
+        if self.min_max_aco:
+            initial_solution = self.construct_initial_solution()
+            initial_cost = self.cvrp.calculate_solution_cost(initial_solution)
+            self.max_pheromone = 1.0 / (self.rho * initial_cost)
+            self.min_pheromone = self.max_pheromone * 0.001
 
         for iteration in range(self.max_iterations):
+            # Kiểm tra dừng
             if self.stop_flag:
+                self.was_stopped = True
                 break
 
-            # Initialize solutions for each ant
+            # Kiểm tra tạm dừng
+            with self.pause_condition:
+                while self.paused and not self.stop_flag:
+                    self.pause_condition.wait()
+
+            start_time = time.time()
+            self.current_iteration = iteration
+
             ant_solutions = []
             ant_costs = []
 
+            # Mỗi kiến xây dựng một giải pháp
             for ant in range(self.num_ants):
                 solution = self.construct_solution()
+
+                # Áp dụng tìm kiếm cục bộ nếu được kích hoạt
+                if self.local_search:
+                    solution = self.local_search_2opt(solution)
+
                 cost = self.cvrp.calculate_solution_cost(solution)
 
                 ant_solutions.append(solution)
                 ant_costs.append(cost)
 
-                # Update best solution
+                # Cập nhật giải pháp tốt nhất
                 if cost < self.best_cost:
-                    self.best_solution = solution
+                    self.best_solution = copy.deepcopy(solution)
                     self.best_cost = cost
+                    self.best_iteration = iteration
 
-            # Update pheromone
+            # Cập nhật pheromone
             self.update_pheromone(ant_solutions, ant_costs)
 
-            # Save current best cost
-            self.cost_history.append(self.best_cost)
+            # Tính toán các thống kê
+            avg_cost = np.mean(ant_costs)
+            worst_cost = np.max(ant_costs)
 
-            # Step callback
+            # Thống kê pheromone
+            pheromone_stats = {
+                'avg': np.mean(self.pheromone),
+                'max': np.max(self.pheromone),
+                'min': np.min(self.pheromone),
+            }
+
+            # Lưu lịch sử
+            end_time = time.time()
+            self.cost_history.append(self.best_cost)
+            self.avg_cost_history.append(avg_cost)
+            self.worst_cost_history.append(worst_cost)
+            self.pheromone_stats_history.append(pheromone_stats)
+            self.time_history.append(end_time - start_time)
+
+            # Gọi hàm callback cho mỗi bước
             if step_callback:
                 iteration_best_idx = np.argmin(ant_costs)
                 self.current_solution = ant_solutions[iteration_best_idx]
@@ -111,70 +177,152 @@ class ACO_CVRP:
                     'cost': self.current_cost,
                     'best_solution': self.best_solution,
                     'best_cost': self.best_cost,
+                    'avg_cost': avg_cost,
+                    'worst_cost': worst_cost,
                     'pheromone': self.pheromone.copy(),
-                    'cost_history': self.cost_history.copy()
+                    'avg_pheromone': pheromone_stats['avg'],
+                    'max_pheromone': pheromone_stats['max'],
+                    'min_pheromone': pheromone_stats['min'],
+                    'cost_history': self.cost_history.copy(),
+                    'avg_cost_history': self.avg_cost_history.copy(),
+                    'worst_cost_history': self.worst_cost_history.copy(),
+                    'time_history': self.time_history.copy()
                 }
                 step_callback(step_data)
 
-        # Callback when finished
+        # Gọi callback khi hoàn thành
         if callback:
             callback((self.best_solution, self.best_cost))
 
+        return self.best_solution, self.best_cost
+
+    def construct_initial_solution(self):
+        """
+        Xây dựng giải pháp ban đầu bằng phương pháp savings
+
+        Trả về:
+        Danh sách các tuyến đường
+        """
+        # Tạo tuyến đường riêng cho từng khách hàng
+        routes = [[i] for i in range(1, self.n)]
+
+        # Tính toán các giá trị savings
+        savings = []
+        for i in range(1, self.n):
+            for j in range(i+1, self.n):
+                # Savings = dist(0,i) + dist(0,j) - dist(i,j)
+                saving = (self.cvrp.distances[0, i] + self.cvrp.distances[0, j] -
+                          self.cvrp.distances[i, j])
+                savings.append((saving, i, j))
+
+        # Sắp xếp theo savings giảm dần
+        savings.sort(reverse=True)
+
+        # Ánh xạ giữa khách hàng và tuyến đường
+        customer_to_route = {i: idx for idx, route in enumerate(routes) for i in route}
+
+        # Hợp nhất các tuyến đường dựa trên savings
+        for saving, i, j in savings:
+            # Nếu i và j đã ở cùng tuyến đường, bỏ qua
+            if customer_to_route[i] == customer_to_route[j]:
+                continue
+
+            # Lấy tuyến đường chứa i và j
+            route_i = routes[customer_to_route[i]]
+            route_j = routes[customer_to_route[j]]
+
+            # Kiểm tra nếu i và j là đầu/cuối của các tuyến đường
+            is_i_end = (i == route_i[0] or i == route_i[-1])
+            is_j_end = (j == route_j[0] or j == route_j[-1])
+
+            # Nếu cả hai không phải đầu/cuối, bỏ qua
+            if not (is_i_end and is_j_end):
+                continue
+
+            # Kiểm tra ràng buộc dung lượng
+            total_demand = sum(self.cvrp.customers[k].demand for k in route_i + route_j)
+            if total_demand > self.cvrp.capacity:
+                continue
+
+            # Hợp nhất hai tuyến đường
+            # Xác định vị trí của i và j trong tuyến đường để hợp nhất hợp lý
+            if i == route_i[0]:
+                route_i.reverse()
+            if j == route_j[-1]:
+                route_j.reverse()
+
+            # Hợp nhất và cập nhật ánh xạ
+            new_route = route_i + route_j
+            routes[customer_to_route[i]] = new_route
+            routes.pop(customer_to_route[j])
+
+            # Cập nhật ánh xạ
+            for k in route_j:
+                customer_to_route[k] = customer_to_route[i]
+
+            # Cập nhật các chỉ số tuyến đường
+            for k in range(1, self.n):
+                for idx, route in enumerate(routes):
+                    if k in route:
+                        customer_to_route[k] = idx
+
+        return routes
+
     def construct_solution(self):
         """
-        Construct a solution using an ant
+        Xây dựng một giải pháp bằng một kiến
 
-        Returns:
-        List of routes (each route is a list of customers)
+        Trả về:
+        Danh sách các tuyến đường (mỗi tuyến là một danh sách khách hàng)
         """
         solution = []
-        remaining = list(range(1, self.n))  # List of unvisited customers (skip depot 0)
+        remaining = list(range(1, self.n))  # Danh sách khách hàng chưa thăm (bỏ qua depot 0)
 
         while remaining:
-            # Start a new route from the depot
+            # Bắt đầu một tuyến mới từ depot
             route = []
             current_capacity = 0
             current_node = 0  # Depot
 
             while True:
-                # Find next possible customers to visit
+                # Tìm các khách hàng tiếp theo có thể thăm
                 candidates = []
                 for node in remaining:
                     if current_capacity + self.cvrp.customers[node].demand <= self.cvrp.capacity:
                         candidates.append(node)
 
                 if not candidates:
-                    break  # No more customers can be added to current route
+                    break  # Không thể thêm khách hàng vào tuyến hiện tại
 
-                # Select next customer based on ACO selection rule
+                # Chọn khách hàng tiếp theo dựa trên quy tắc chọn của ACO
                 next_node = self.select_next_node(current_node, candidates)
                 route.append(next_node)
                 remaining.remove(next_node)
 
-                # Update current capacity
+                # Cập nhật dung lượng hiện tại
                 current_capacity += self.cvrp.customers[next_node].demand
                 current_node = next_node
 
-            if route:  # If route is not empty, add to solution
+            if route:  # Nếu tuyến không rỗng, thêm vào giải pháp
                 solution.append(route)
 
         return solution
 
     def select_next_node(self, current, candidates):
         """
-        Select next customer based on pheromone and heuristic
+        Chọn khách hàng tiếp theo dựa trên pheromone và heuristic
 
-        Parameters:
-        current -- Current customer
-        candidates -- List of possible next customers
+        Tham số:
+        current -- Khách hàng hiện tại
+        candidates -- Danh sách các khách hàng tiếp theo có thể chọn
 
-        Returns:
-        Selected next customer
+        Trả về:
+        Khách hàng tiếp theo được chọn
         """
         if not candidates:
             return None
 
-        # Calculate probability for each candidate
+        # Tính xác suất cho mỗi ứng viên
         probabilities = np.zeros(len(candidates))
 
         for i, candidate in enumerate(candidates):
@@ -182,43 +330,167 @@ class ACO_CVRP:
             heuristic_value = self.heuristic[current, candidate] ** self.beta
             probabilities[i] = pheromone * heuristic_value
 
-        # Normalize probabilities
+        # Chuẩn hóa xác suất
         if np.sum(probabilities) > 0:
             probabilities = probabilities / np.sum(probabilities)
         else:
             probabilities = np.ones(len(candidates)) / len(candidates)
 
-        # Select next customer based on probability
+        # Chọn khách hàng tiếp theo dựa trên xác suất
         selected = np.random.choice(len(candidates), p=probabilities)
         return candidates[selected]
 
     def update_pheromone(self, solutions, costs):
         """
-        Update pheromone matrix
+        Cập nhật ma trận pheromone
 
-        Parameters:
-        solutions -- List of solutions
-        costs -- List of corresponding costs
+        Tham số:
+        solutions -- Danh sách các giải pháp
+        costs -- Danh sách các chi phí tương ứng
         """
-        # Evaporate pheromone
+        # Bay hơi pheromone
         self.pheromone = (1 - self.rho) * self.pheromone
 
-        # Add new pheromone
-        for solution, cost in zip(solutions, costs):
-            delta = self.q / cost if cost > 0 else 0
+        if self.min_max_aco:
+            # Trong MIN-MAX ACO, chỉ kiến tốt nhất vòng lặp hoặc tốt nhất toàn cục thả pheromone
+            best_idx = np.argmin(costs)
+            best_solution = solutions[best_idx]
+            best_cost = costs[best_idx]
 
-            for route in solution:
-                prev_node = 0  # Start from depot
+            # Thả pheromone cho giải pháp tốt nhất vòng lặp
+            self.deposit_pheromone(best_solution, best_cost)
 
-                for node in route:
-                    self.pheromone[prev_node, node] += delta
-                    self.pheromone[node, prev_node] += delta  # Undirected graph
-                    prev_node = node
+            # Thả pheromone cho giải pháp tốt nhất toàn cục nếu có
+            if self.best_solution:
+                self.deposit_pheromone(self.best_solution, self.best_cost, weight=2.0)
 
-                # Return to depot
-                self.pheromone[prev_node, 0] += delta
-                self.pheromone[0, prev_node] += delta
+            # Giới hạn pheromone trong khoảng [min_pheromone, max_pheromone]
+            self.pheromone = np.clip(self.pheromone, self.min_pheromone, self.max_pheromone)
+        else:
+            # Trong ACO tiêu chuẩn, tất cả kiến thả pheromone
+            for solution, cost in zip(solutions, costs):
+                self.deposit_pheromone(solution, cost)
+
+            # Thả pheromone bổ sung cho giải pháp tốt nhất nếu sử dụng kiến ưu tú
+            if self.elitist_ants > 0 and self.best_solution:
+                self.deposit_pheromone(self.best_solution, self.best_cost, weight=self.elitist_ants)
+
+    def deposit_pheromone(self, solution, cost, weight=1.0):
+        """
+        Thả pheromone trên các cạnh của một giải pháp
+
+        Tham số:
+        solution -- Giải pháp (danh sách các tuyến)
+        cost -- Chi phí của giải pháp
+        weight -- Hệ số nhân cho lượng pheromone (mặc định = 1.0)
+        """
+        delta = (self.q / cost) * weight if cost > 0 else 0
+
+        for route in solution:
+            prev_node = 0  # Bắt đầu từ depot
+
+            for node in route:
+                self.pheromone[prev_node, node] += delta
+                self.pheromone[node, prev_node] += delta  # Đồ thị vô hướng
+                prev_node = node
+
+            # Quay lại depot
+            self.pheromone[prev_node, 0] += delta
+            self.pheromone[0, prev_node] += delta
+
+    def local_search_2opt(self, solution):
+        """
+        Áp dụng tìm kiếm cục bộ 2-opt cho mỗi tuyến
+
+        Tham số:
+        solution -- Giải pháp (danh sách các tuyến)
+
+        Trả về:
+        Giải pháp cải tiến
+        """
+        improved_solution = []
+
+        for route in solution:
+            # Bỏ qua các tuyến quá ngắn
+            if len(route) <= 2:
+                improved_solution.append(route)
+                continue
+
+            # Áp dụng 2-opt cho tuyến
+            improved_route = self.apply_2opt(route)
+            improved_solution.append(improved_route)
+
+        return improved_solution
+
+    def apply_2opt(self, route):
+        """
+        Áp dụng tìm kiếm 2-opt cho một tuyến đơn
+
+        Tham số:
+        route -- Tuyến ban đầu
+
+        Trả về:
+        Tuyến cải tiến
+        """
+        best_route = route.copy()
+        improved = True
+
+        while improved:
+            improved = False
+            best_distance = self.calculate_route_distance(best_route)
+
+            for i in range(len(route) - 1):
+                for j in range(i + 1, len(route)):
+                    new_route = best_route.copy()
+                    # Đảo ngược đoạn từ i đến j
+                    new_route[i:j+1] = reversed(new_route[i:j+1])
+                    new_distance = self.calculate_route_distance(new_route)
+
+                    if new_distance < best_distance:
+                        best_route = new_route
+                        best_distance = new_distance
+                        improved = True
+
+            # Để tránh chạy quá lâu, ngắt nếu đã có cải thiện
+            if improved:
+                break
+
+        return best_route
+
+    def calculate_route_distance(self, route):
+        """
+        Tính tổng khoảng cách cho một tuyến (bao gồm từ/đến depot)
+
+        Tham số:
+        route -- Tuyến đường
+
+        Trả về:
+        Tổng khoảng cách
+        """
+        distance = 0
+
+        # Khoảng cách từ depot đến khách hàng đầu tiên
+        distance += self.cvrp.distances[0, route[0]]
+
+        # Khoảng cách giữa các khách hàng
+        for i in range(len(route) - 1):
+            distance += self.cvrp.distances[route[i], route[i+1]]
+
+        # Khoảng cách từ khách hàng cuối cùng về depot
+        distance += self.cvrp.distances[route[-1], 0]
+
+        return distance
 
     def stop(self):
-        """Stop the algorithm"""
+        """Dừng thuật toán"""
         self.stop_flag = True
+
+    def pause(self):
+        """Tạm dừng thuật toán"""
+        self.paused = True
+
+    def resume(self):
+        """Tiếp tục thuật toán"""
+        with self.pause_condition:
+            self.paused = False
+            self.pause_condition.notify_all()

@@ -71,7 +71,7 @@ class CVRPVisualization:
             ax.annotate(f"{i}", (xi, yi), xytext=(5, 5), textcoords='offset points', fontsize=8)
 
         # Add colorbar for demand
-        plt.colorbar(scatter, ax=ax, label='Demand')
+        ax.figure.colorbar(scatter, ax=ax, label='Demand')
 
         # Add legend
         ax.legend()

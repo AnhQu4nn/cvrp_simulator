@@ -10,7 +10,7 @@ import os
 
 from .aco_app import AntColonyApp
 from .genetic_app import GeneticApp
-from .comparison_app import AlgorithmComparison
+
 
 
 class AlgorithmSelector:
@@ -71,28 +71,6 @@ class AlgorithmSelector:
             select_button = ttk.Button(frame, text="Select", command=cmd)
             select_button.pack(side=tk.RIGHT, padx=10)
 
-        # Add comparison button
-        compare_frame = ttk.Frame(button_frame, padding="10", relief=tk.RAISED, borderwidth=1)
-        compare_frame.pack(fill=tk.X, pady=10)
-
-        # Icon or illustration placeholder
-        icon_frame = ttk.Frame(compare_frame, width=50, height=50)
-        icon_frame.pack(side=tk.LEFT, padx=10)
-
-        # Algorithm info
-        info_frame = ttk.Frame(compare_frame)
-        info_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
-
-        title_label = ttk.Label(info_frame, text="Compare Algorithms", font=("Arial", 12, "bold"))
-        title_label.pack(anchor=tk.W)
-
-        desc_label = ttk.Label(info_frame, text="Compare performance of different algorithms")
-        desc_label.pack(anchor=tk.W, pady=5)
-
-        # Select button
-        select_button = ttk.Button(compare_frame, text="Select", command=self.launch_comparison)
-        select_button.pack(side=tk.RIGHT, padx=10)
-
         # Exit button
         exit_button = ttk.Button(main_frame, text="Exit", command=self.root.destroy)
         exit_button.pack(side=tk.BOTTOM, pady=10)
@@ -115,12 +93,6 @@ class AlgorithmSelector:
         genetic_root.protocol("WM_DELETE_WINDOW", lambda: self.on_app_closing(genetic_root))
         app = GeneticApp(genetic_root, self.root)
 
-    def launch_comparison(self):
-        """Launch Algorithm Comparison application"""
-        self.root.withdraw()  # Hide selector window
-        comparison_root = tk.Toplevel(self.root)
-        comparison_root.protocol("WM_DELETE_WINDOW", lambda: self.on_app_closing(comparison_root))
-        app = AlgorithmComparison(comparison_root, self.root)
 
     def on_app_closing(self, window):
         """Handle app window closing - return to selector"""
