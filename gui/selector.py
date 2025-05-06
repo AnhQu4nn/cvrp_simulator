@@ -19,7 +19,7 @@ class AlgorithmSelector:
     def __init__(self, root):
         """Initialize algorithm selection interface"""
         self.root = root
-        self.root.title("Select algorithm for CVRP problem")
+        self.root.title("Lựa chọn thuật toán cho bài toán CVRP")
         self.root.geometry("600x600")
 
         self.create_gui()
@@ -31,11 +31,11 @@ class AlgorithmSelector:
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # Title
-        title_label = ttk.Label(main_frame, text="CVRP Solver Application", font=("Arial", 16, "bold"))
+        title_label = ttk.Label(main_frame, text="Phần mềm minh họa giải bài toán CVRP", font=("Arial", 16, "bold"))
         title_label.pack(pady=10)
 
         subtitle_label = ttk.Label(main_frame,
-                                   text="Select an algorithm to solve the Capacitated Vehicle Routing Problem",
+                                   text="Lựa chọn thuật toán giải Capacitated Vehicle Routing Problem",
                                    font=("Arial", 10))
         subtitle_label.pack(pady=5)
 
@@ -45,8 +45,8 @@ class AlgorithmSelector:
 
         # Create buttons for each algorithm
         algorithms = [
-            ("Ant Colony Optimization", "Simulates ants finding routes", self.launch_ant_colony),
-            ("Genetic Algorithm", "Evolves a population of solutions", self.launch_genetic),
+            ("Ant Colony Optimization", "Mô phỏng các con kiến tìm đường đi", self.launch_ant_colony),
+            ("Genetic Algorithm", "Dần cải thiện quần thể lời giải qua các thế hệ", self.launch_genetic),
         ]
 
         for idx, (title, desc, cmd) in enumerate(algorithms):
@@ -68,15 +68,15 @@ class AlgorithmSelector:
             algo_desc.pack(anchor=tk.W, pady=5)
 
             # Select button
-            select_button = ttk.Button(frame, text="Select", command=cmd)
+            select_button = ttk.Button(frame, text="Chọn", command=cmd)
             select_button.pack(side=tk.RIGHT, padx=10)
 
         # Exit button
-        exit_button = ttk.Button(main_frame, text="Exit", command=self.root.destroy)
+        exit_button = ttk.Button(main_frame, text="Thoát", command=self.root.destroy)
         exit_button.pack(side=tk.BOTTOM, pady=10)
 
         # Information
-        info_label = ttk.Label(main_frame, text="© 2025 - Simulation for CVRP Algorithms", font=("Arial", 8))
+        info_label = ttk.Label(main_frame, text="© 2025 - Nguyễn Anh Quân - Vũ Quốc Long - DAA", font=("Arial", 8))
         info_label.pack(side=tk.BOTTOM, pady=10)
 
     def launch_ant_colony(self):
