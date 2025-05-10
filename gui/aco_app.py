@@ -14,6 +14,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from core import CVRP, ACO_CVRP
 from .visualization import ACOVisualization
+from .tooltip import ToolTip
 
 
 class AntColonyApp:
@@ -73,9 +74,58 @@ class AntColonyApp:
         main_panel = ttk.PanedWindow(main_tab, orient=tk.HORIZONTAL)
         main_panel.pack(fill=tk.BOTH, expand=True)
 
-        # Panel điều khiển bên trái
-        self.control_frame = ttk.LabelFrame(main_panel, text="Điều khiển")
-        main_panel.add(self.control_frame, weight=1)
+        # Panel điều khiển bên trái với thanh cuộn
+        control_container = ttk.Frame(main_panel)
+        main_panel.add(control_container, weight=1)
+
+        # Thêm thanh cuộn cho khung điều khiển
+        control_scroll = ttk.Scrollbar(control_container, orient="vertical")
+        control_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Canvas để chứa các điều khiển và hỗ trợ cuộn
+        control_canvas = tk.Canvas(control_container, yscrollcommand=control_scroll.set, 
+                                  highlightthickness=0, bg=self.root.cget('bg'))
+        control_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        control_scroll.config(command=control_canvas.yview)
+
+        # Frame thực sự chứa các điều khiển
+        self.control_frame = ttk.LabelFrame(control_canvas, text="Điều khiển")
+        control_window = control_canvas.create_window((0, 0), window=self.control_frame, anchor="nw", 
+                                                      tags="self.control_frame", width=control_container.winfo_width()-20)
+
+        # Cập nhật chiều rộng của frame khi resize
+        def on_container_configure(event):
+            # Cập nhật chiều rộng của cửa sổ trong canvas khi container thay đổi kích thước
+            canvas_width = event.width - 20  # Trừ đi chiều rộng của thanh cuộn và padding
+            control_canvas.itemconfig("self.control_frame", width=canvas_width)
+            
+        control_container.bind("<Configure>", on_container_configure)
+        
+        # Cấu hình Canvas để cuộn khi kích thước của nội dung thay đổi
+        def configure_scroll_region(event):
+            # Cập nhật vùng cuộn khi kích thước của frame thay đổi
+            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
+            
+        self.control_frame.bind("<Configure>", configure_scroll_region)
+
+        # Làm cho canvas có thể cuộn bằng chuột
+        def _on_mousewheel(event):
+            # Chỉ cuộn khi con trỏ nằm trên canvas hoặc các widget con của nó
+            if str(event.widget).startswith(str(control_canvas)) or str(event.widget).startswith(str(self.control_frame)):
+                control_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Gán xử lý sự kiện cho tất cả các widget con
+        def _bind_mousewheel(event):
+            control_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            
+        def _unbind_mousewheel(event):
+            control_canvas.unbind_all("<MouseWheel>")
+            
+        # Khi chuột vào hoặc rời vùng điều khiển
+        control_canvas.bind("<Enter>", _bind_mousewheel)
+        control_canvas.bind("<Leave>", _unbind_mousewheel)
+        self.control_frame.bind("<Enter>", _bind_mousewheel)
+        self.control_frame.bind("<Leave>", _unbind_mousewheel)
 
         # Panel trực quan hóa bên phải
         viz_panel = ttk.LabelFrame(main_panel, text="Minh họa")
@@ -265,62 +315,74 @@ class AntColonyApp:
         self.ant_count = tk.StringVar(value=str(self.n_ants))
         ant_count_entry = ttk.Entry(basic_frame, textvariable=self.ant_count, width=10)
         ant_count_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(ant_count_entry, "Số lượng kiến trong hệ thống (mỗi kiến sẽ tìm một giải pháp)")
 
         # Tooltip cho Alpha
         ttk.Label(basic_frame, text="Alpha (tầm quan trọng pheromone):").pack(anchor=tk.W, padx=5, pady=2)
         self.alpha_var = tk.StringVar(value=str(self.alpha))
         alpha_entry = ttk.Entry(basic_frame, textvariable=self.alpha_var, width=10)
         alpha_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(alpha_entry, "Điều chỉnh mức độ ảnh hưởng của pheromone trong quá trình quyết định")
 
         # Tooltip cho Beta
         ttk.Label(basic_frame, text="Beta (tầm quan trọng khoảng cách):").pack(anchor=tk.W, padx=5, pady=2)
         self.beta_var = tk.StringVar(value=str(self.beta))
         beta_entry = ttk.Entry(basic_frame, textvariable=self.beta_var, width=10)
         beta_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(beta_entry, "Điều chỉnh mức độ ảnh hưởng của thông tin heuristic (khoảng cách) trong quá trình quyết định")
 
         # Tooltip cho Rho
         ttk.Label(basic_frame, text="Rho (tỷ lệ bay hơi pheromone):").pack(anchor=tk.W, padx=5, pady=2)
         self.rho_var = tk.StringVar(value=str(self.rho))
         rho_entry = ttk.Entry(basic_frame, textvariable=self.rho_var, width=10)
         rho_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(rho_entry, "Tỷ lệ bay hơi pheromone sau mỗi vòng lặp (0-1)")
 
         # Tooltip cho Q
         ttk.Label(basic_frame, text="Q (lượng pheromone thả):").pack(anchor=tk.W, padx=5, pady=2)
         self.q_var = tk.StringVar(value=str(self.q))
         q_entry = ttk.Entry(basic_frame, textvariable=self.q_var, width=10)
         q_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(q_entry, "Hệ số lượng pheromone mỗi kiến thả trên đường đi của mình")
 
         # Số vòng lặp tối đa
         ttk.Label(basic_frame, text="Số vòng lặp tối đa:").pack(anchor=tk.W, padx=5, pady=2)
         self.iterations_var = tk.StringVar(value=str(self.iterations))
         iterations_entry = ttk.Entry(basic_frame, textvariable=self.iterations_var, width=10)
         iterations_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(iterations_entry, "Số vòng lặp tối đa thuật toán sẽ thực hiện")
 
         # Tham số nâng cao
-        # MIN-MAX Ant System
-        ttk.Label(advanced_frame, text="Biến thể thuật toán:").pack(anchor=tk.W, padx=5, pady=2)
+        advanced_frame = ttk.LabelFrame(algo_notebook, text="Tính năng nâng cao")
+        advanced_frame.pack(fill=tk.X, padx=5, pady=5)
 
+        # MIN-MAX ACO
         self.min_max_var = tk.BooleanVar(value=self.min_max_aco)
-        min_max_check = ttk.Checkbutton(advanced_frame, text="Sử dụng MIN-MAX Ant System",
+        min_max_check = ttk.Checkbutton(advanced_frame, text="MIN-MAX ACO",
                                        variable=self.min_max_var)
         min_max_check.pack(anchor=tk.W, padx=5, pady=2)
+        ToolTip(min_max_check, "Phiên bản cải tiến ACO giới hạn pheromone trong khoảng [min, max] để tránh hội tụ sớm")
 
-        # Tìm kiếm cục bộ
+        # Local Search
         self.local_search_var = tk.BooleanVar(value=self.local_search)
-        local_search_check = ttk.Checkbutton(advanced_frame, text="Sử dụng tìm kiếm cục bộ",
+        local_search_check = ttk.Checkbutton(advanced_frame, text="Tìm kiếm cục bộ", 
                                            variable=self.local_search_var)
         local_search_check.pack(anchor=tk.W, padx=5, pady=2)
+        ToolTip(local_search_check, "Áp dụng thuật toán 2-opt để cải thiện mỗi tuyến đường sau khi tạo lời giải")
 
-        # Kiến ưu tú
-        ttk.Label(advanced_frame, text="Số kiến ưu tú:").pack(anchor=tk.W, padx=5, pady=2)
+        # Elitist Ants
+        elitist_frame = ttk.Frame(advanced_frame)
+        elitist_frame.pack(fill=tk.X, padx=5, pady=2)
+        ttk.Label(elitist_frame, text="Số kiến ưu tú:").pack(side=tk.LEFT)
         self.elitist_ants_var = tk.StringVar(value=str(self.elitist_ants))
-        elitist_ants_entry = ttk.Entry(advanced_frame, textvariable=self.elitist_ants_var, width=10)
-        elitist_ants_entry.pack(fill=tk.X, padx=5, pady=2)
+        elitist_ants_entry = ttk.Entry(elitist_frame, textvariable=self.elitist_ants_var, width=10)
+        elitist_ants_entry.pack(side=tk.LEFT, padx=5)
+        ToolTip(elitist_ants_entry, "Số kiến ưu tú được phép đặt thêm pheromone trên tuyến đường tốt nhất (0 để vô hiệu hóa)")
 
         # Thêm thông báo về tính năng nâng cao
-        note_label = ttk.Label(advanced_frame, text="Chú ý: Các tính năng nâng cao chỉ mới có giao diện, "
-                                                 "sẽ được cài đặt trong phiên bản sau.",
-                            foreground="red", wraplength=250)
+        note_label = ttk.Label(advanced_frame, 
+                             text="Các tính năng nâng cao đã được kích hoạt và sẽ ảnh hưởng đến hiệu suất thuật toán",
+                             wraplength=250, justify=tk.LEFT)
         note_label.pack(fill=tk.X, padx=5, pady=10)
 
     def create_execution_controls(self):
@@ -541,6 +603,8 @@ class AntColonyApp:
         """Cập nhật tham số từ giao diện"""
         try:
             # Tham số cơ bản
+            self.n_customers = int(self.customer_count.get())
+            self.capacity = int(self.capacity_var.get())
             self.n_ants = int(self.ant_count.get())
             self.alpha = float(self.alpha_var.get())
             self.beta = float(self.beta_var.get())
@@ -549,26 +613,78 @@ class AntColonyApp:
             self.iterations = int(self.iterations_var.get())
 
             # Tham số nâng cao
-            self.min_max_aco = self.min_max_var.get()
-            self.local_search = self.local_search_var.get()
+            prev_min_max = self.min_max_aco
+            prev_local_search = self.local_search
+            prev_elitist_ants = self.elitist_ants
+            
+            self.min_max_aco = bool(self.min_max_var.get())
+            self.local_search = bool(self.local_search_var.get())
             self.elitist_ants = int(self.elitist_ants_var.get())
+            
+            # Thông báo khi tính năng nâng cao được kích hoạt
+            changes = []
+            if self.min_max_aco != prev_min_max and self.min_max_aco:
+                changes.append("MIN-MAX ACO")
+            if self.local_search != prev_local_search and self.local_search:
+                changes.append("Tìm kiếm cục bộ")
+            if self.elitist_ants != prev_elitist_ants and self.elitist_ants > 0:
+                changes.append(f"Kiến ưu tú ({self.elitist_ants})")
+                
+            if changes:
+                messagebox.showinfo("Tính năng nâng cao", f"Đã kích hoạt: {', '.join(changes)}")
 
             # Kiểm tra giới hạn
+            if self.n_customers < 5:
+                self.n_customers = 5
+                self.customer_count.set("5")
+            elif self.n_customers > 200:
+                self.n_customers = 200
+                self.customer_count.set("200")
+
+            if self.capacity < 50:
+                self.capacity = 50
+                self.capacity_var.set("50")
+
             if self.n_ants < 1:
                 self.n_ants = 1
                 self.ant_count.set("1")
+            elif self.n_ants > 100:
+                self.n_ants = 100
+                self.ant_count.set("100")
 
-            if self.iterations < 1:
-                self.iterations = 1
-                self.iterations_var.set("1")
+            if self.alpha < 0:
+                self.alpha = 0
+                self.alpha_var.set("0")
+            elif self.alpha > 10:
+                self.alpha = 10
+                self.alpha_var.set("10")
+
+            if self.beta < 0:
+                self.beta = 0
+                self.beta_var.set("0")
+            elif self.beta > 10:
+                self.beta = 10
+                self.beta_var.set("10")
 
             if self.rho < 0 or self.rho > 1:
                 self.rho = max(0, min(1, self.rho))
                 self.rho_var.set(str(self.rho))
 
+            if self.q < 0:
+                self.q = 0
+                self.q_var.set("0")
+
+            if self.iterations < 1:
+                self.iterations = 1
+                self.iterations_var.set("1")
+                
+            # Kiểm tra giới hạn tham số nâng cao
             if self.elitist_ants < 0:
                 self.elitist_ants = 0
                 self.elitist_ants_var.set("0")
+            elif self.elitist_ants > self.n_ants // 2:
+                self.elitist_ants = self.n_ants // 2
+                self.elitist_ants_var.set(str(self.elitist_ants))
 
         except ValueError:
             messagebox.showerror("Lỗi", "Tham số không hợp lệ, sử dụng giá trị mặc định")
@@ -617,8 +733,11 @@ class AntColonyApp:
             beta=self.beta,
             rho=self.rho,
             q=self.q,
-            max_iterations=self.iterations
-            # Các tham số nâng cao được giữ lại cho phiên bản sau
+            max_iterations=self.iterations,
+            # Thêm các tham số nâng cao
+            min_max_aco=self.min_max_aco,
+            local_search=self.local_search,
+            elitist_ants=self.elitist_ants
         )
 
         # Thiết lập trực quan hóa

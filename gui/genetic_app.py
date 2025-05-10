@@ -14,6 +14,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from core import CVRP, GeneticAlgorithm_CVRP
 from .visualization import GeneticVisualization
+from .tooltip import ToolTip
 
 
 class GeneticApp:
@@ -36,7 +37,7 @@ class GeneticApp:
         self.crossover_rate = 0.8
         self.elitism = 5
         self.max_generations = 100
-        # Các biến cho tính năng mở rộng - chỉ lưu trữ cho UI, không sử dụng trong thuật toán hiện tại
+        # Các biến cho tính năng mở rộng
         self.selection_method = "tournament"
         self.crossover_method = "ordered"
         self.mutation_method = "swap"
@@ -74,9 +75,48 @@ class GeneticApp:
         main_panel = ttk.PanedWindow(main_tab, orient=tk.HORIZONTAL)
         main_panel.pack(fill=tk.BOTH, expand=True)
 
-        # Panel điều khiển bên trái
-        self.control_frame = ttk.LabelFrame(main_panel, text="Điều khiển")
-        main_panel.add(self.control_frame, weight=1)
+        # Panel điều khiển bên trái với thanh cuộn
+        control_container = ttk.Frame(main_panel)
+        main_panel.add(control_container, weight=1)
+
+        # Thêm thanh cuộn cho khung điều khiển
+        control_scroll = ttk.Scrollbar(control_container, orient="vertical")
+        control_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Canvas để chứa các điều khiển và hỗ trợ cuộn
+        control_canvas = tk.Canvas(control_container, yscrollcommand=control_scroll.set, 
+                                  highlightthickness=0, bg=self.root.cget('bg'))
+        control_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        control_scroll.config(command=control_canvas.yview)
+
+        # Frame thực sự chứa các điều khiển
+        self.control_frame = ttk.LabelFrame(control_canvas, text="Điều khiển")
+        control_window = control_canvas.create_window((0, 0), window=self.control_frame, anchor="nw", 
+                                                      tags="self.control_frame")
+
+        # Cấu hình Canvas để cuộn khi kích thước thay đổi
+        def configure_scroll_region(event):
+            control_canvas.configure(scrollregion=control_canvas.bbox("all"))
+        self.control_frame.bind("<Configure>", configure_scroll_region)
+
+        # Làm cho canvas có thể cuộn bằng chuột
+        def _on_mousewheel(event):
+            # Chỉ cuộn khi con trỏ nằm trên canvas hoặc các widget con của nó
+            if str(event.widget).startswith(str(control_canvas)) or str(event.widget).startswith(str(self.control_frame)):
+                control_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Gán xử lý sự kiện cho tất cả các widget con
+        def _bind_mousewheel(event):
+            control_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            
+        def _unbind_mousewheel(event):
+            control_canvas.unbind_all("<MouseWheel>")
+            
+        # Khi chuột vào hoặc rời vùng điều khiển
+        control_canvas.bind("<Enter>", _bind_mousewheel)
+        control_canvas.bind("<Leave>", _unbind_mousewheel)
+        self.control_frame.bind("<Enter>", _bind_mousewheel)
+        self.control_frame.bind("<Leave>", _unbind_mousewheel)
 
         # Panel trực quan hóa bên phải
         viz_panel = ttk.LabelFrame(main_panel, text="Minh họa")
@@ -264,26 +304,31 @@ class GeneticApp:
         self.population_size_var = tk.StringVar(value=str(self.population_size))
         population_size_entry = ttk.Entry(basic_frame, textvariable=self.population_size_var, width=10)
         population_size_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(population_size_entry, "Số lượng cá thể trong quần thể (số lượng giải pháp ứng viên trong mỗi thế hệ)")
 
         ttk.Label(basic_frame, text="Tỷ lệ đột biến:").pack(anchor=tk.W, padx=5, pady=2)
         self.mutation_rate_var = tk.StringVar(value=str(self.mutation_rate))
         mutation_rate_entry = ttk.Entry(basic_frame, textvariable=self.mutation_rate_var, width=10)
         mutation_rate_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(mutation_rate_entry, "Xác suất xảy ra đột biến (0-1). Giá trị cao tạo nhiều biến đổi, giá trị thấp giữ ổn định quần thể")
 
         ttk.Label(basic_frame, text="Tỷ lệ lai ghép:").pack(anchor=tk.W, padx=5, pady=2)
         self.crossover_rate_var = tk.StringVar(value=str(self.crossover_rate))
         crossover_rate_entry = ttk.Entry(basic_frame, textvariable=self.crossover_rate_var, width=10)
         crossover_rate_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(crossover_rate_entry, "Xác suất xảy ra lai ghép (0-1). Giá trị cao tạo nhiều con lai, giá trị thấp giữ nguyên cha mẹ")
 
         ttk.Label(basic_frame, text="Số cá thể ưu tú:").pack(anchor=tk.W, padx=5, pady=2)
         self.elitism_var = tk.StringVar(value=str(self.elitism))
         elitism_entry = ttk.Entry(basic_frame, textvariable=self.elitism_var, width=10)
         elitism_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(elitism_entry, "Số cá thể tốt nhất được giữ lại nguyên vẹn trong thế hệ tiếp theo")
 
         ttk.Label(basic_frame, text="Số thế hệ tối đa:").pack(anchor=tk.W, padx=5, pady=2)
         self.generations_var = tk.StringVar(value=str(self.max_generations))
         generations_entry = ttk.Entry(basic_frame, textvariable=self.generations_var, width=10)
         generations_entry.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(generations_entry, "Số thế hệ tối đa thuật toán sẽ tiến hóa")
 
         # Tham số nâng cao
         # Phương pháp chọn lọc
@@ -293,6 +338,7 @@ class GeneticApp:
                                     values=["tournament", "roulette", "rank"])
         selection_combo.pack(fill=tk.X, padx=5, pady=2)
         selection_combo.bind("<<ComboboxSelected>>", self.on_selection_change)
+        ToolTip(selection_combo, "Phương pháp dùng để chọn cá thể làm cha mẹ:\n- tournament: Chọn qua thi đấu loại\n- roulette: Chọn theo xác suất\n- rank: Chọn dựa trên thứ hạng")
 
         # Kích thước tournament (chỉ hiển thị khi chọn tournament)
         self.tournament_frame = ttk.Frame(advanced_frame)
@@ -301,6 +347,7 @@ class GeneticApp:
         self.tournament_size_var = tk.StringVar(value=str(self.tournament_size))
         tournament_size_entry = ttk.Entry(self.tournament_frame, textvariable=self.tournament_size_var, width=10)
         tournament_size_entry.pack(fill=tk.X)
+        ToolTip(tournament_size_entry, "Số cá thể tham gia mỗi vòng thi đấu chọn lọc (chỉ áp dụng với tournament)")
 
         # Phương pháp lai ghép
         ttk.Label(advanced_frame, text="Phương pháp lai ghép:").pack(anchor=tk.W, padx=5, pady=2)
@@ -308,6 +355,7 @@ class GeneticApp:
         crossover_combo = ttk.Combobox(advanced_frame, textvariable=self.crossover_method_var,
                                      values=["ordered", "partially_mapped", "cycle"])
         crossover_combo.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(crossover_combo, "Phương pháp lai ghép để tạo con:\n- ordered: Lai ghép có thứ tự (OX)\n- partially_mapped: Lai ghép ánh xạ một phần (PMX)\n- cycle: Lai ghép chu kỳ (CX)")
 
         # Phương pháp đột biến
         ttk.Label(advanced_frame, text="Phương pháp đột biến:").pack(anchor=tk.W, padx=5, pady=2)
@@ -315,6 +363,7 @@ class GeneticApp:
         mutation_combo = ttk.Combobox(advanced_frame, textvariable=self.mutation_method_var,
                                     values=["swap", "insert", "scramble", "inversion"])
         mutation_combo.pack(fill=tk.X, padx=5, pady=2)
+        ToolTip(mutation_combo, "Phương pháp đột biến:\n- swap: Hoán đổi\n- insert: Chèn\n- inversion: Đảo ngược\n- scramble: Xáo trộn")
 
         # Dừng sớm
         early_stop_frame = ttk.Frame(advanced_frame)
@@ -324,17 +373,19 @@ class GeneticApp:
         early_stop_check = ttk.Checkbutton(early_stop_frame, text="Dừng sớm",
                                           variable=self.early_stop_var)
         early_stop_check.pack(side=tk.LEFT, padx=5)
+        ToolTip(early_stop_check, "Dừng thuật toán sớm nếu không có cải thiện sau số thế hệ chỉ định")
 
         ttk.Label(early_stop_frame, text="Số thế hệ:").pack(side=tk.LEFT, padx=5)
         self.early_stop_gen_var = tk.StringVar(value=str(self.early_stopping))
         early_stop_entry = ttk.Entry(early_stop_frame, textvariable=self.early_stop_gen_var,
                                    width=5)
         early_stop_entry.pack(side=tk.LEFT, padx=5)
+        ToolTip(early_stop_entry, "Số thế hệ không cải thiện để dừng thuật toán")
 
         # Thêm thông báo về tính năng nâng cao
-        note_label = ttk.Label(advanced_frame, text="Chú ý: Các tính năng nâng cao chỉ mới có giao diện, "
-                                                 "sẽ được cài đặt trong phiên bản sau.",
-                            foreground="red", wraplength=250)
+        note_label = ttk.Label(advanced_frame, 
+                            text="Các tính năng nâng cao đã được kích hoạt và sẽ ảnh hưởng đến hiệu suất thuật toán",
+                            wraplength=250, justify=tk.LEFT)
         note_label.pack(fill=tk.X, padx=5, pady=10)
 
         # Mặc định ẩn khung tournament nếu không chọn tournament
@@ -573,6 +624,11 @@ class GeneticApp:
             self.max_generations = int(self.generations_var.get())
 
             # Tham số nâng cao
+            prev_selection = self.selection_method
+            prev_crossover = self.crossover_method
+            prev_mutation = self.mutation_method
+            prev_early_stop = self.early_stopping_enabled
+            
             self.selection_method = self.selection_var.get()
             self.crossover_method = self.crossover_method_var.get()
             self.mutation_method = self.mutation_method_var.get()
@@ -583,6 +639,20 @@ class GeneticApp:
             # Dừng sớm
             self.early_stopping_enabled = self.early_stop_var.get()
             self.early_stopping = int(self.early_stop_gen_var.get())
+            
+            # Thông báo khi tính năng nâng cao được kích hoạt
+            changes = []
+            if self.selection_method != prev_selection:
+                changes.append(f"Phương pháp chọn lọc: {self.selection_method}")
+            if self.crossover_method != prev_crossover:
+                changes.append(f"Phương pháp lai ghép: {self.crossover_method}")
+            if self.mutation_method != prev_mutation:
+                changes.append(f"Phương pháp đột biến: {self.mutation_method}")
+            if self.early_stopping_enabled != prev_early_stop and self.early_stopping_enabled:
+                changes.append(f"Dừng sớm sau {self.early_stopping} thế hệ không cải thiện")
+                
+            if changes:
+                messagebox.showinfo("Tính năng nâng cao", f"Đã kích hoạt: {', '.join(changes)}")
 
             # Kiểm tra giới hạn
             if self.population_size < 10:
@@ -669,7 +739,13 @@ class GeneticApp:
             mutation_rate=self.mutation_rate,
             crossover_rate=self.crossover_rate,
             elitism=self.elitism,
-            max_generations=self.max_generations
+            max_generations=self.max_generations,
+            # Thêm các tham số nâng cao
+            selection_method=self.selection_method,
+            crossover_method=self.crossover_method,
+            mutation_method=self.mutation_method,
+            tournament_size=self.tournament_size,
+            early_stopping=self.early_stopping if self.early_stopping_enabled else None
         )
 
         # Thiết lập trực quan hóa
