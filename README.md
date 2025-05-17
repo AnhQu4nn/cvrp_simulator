@@ -44,7 +44,7 @@ CVRP Simulator là một ứng dụng mô phỏng trực quan giúp giải và s
 
 ```bash
 # Clone mã nguồn
-git clone https://github.com/yourusername/cvrp_simulator.git
+git clone https://github.com/AnhQu4nn/cvrp_simulator.git
 cd cvrp_simulator
 
 # Tạo môi trường ảo (tùy chọn)
