@@ -10,6 +10,7 @@ import os
 
 from .aco_app import AntColonyApp
 from .genetic_app import GeneticApp
+from .comparison_app import ComparisonApp
 
 
 
@@ -47,6 +48,7 @@ class AlgorithmSelector:
         algorithms = [
             ("Ant Colony Optimization", "Mô phỏng các con kiến tìm đường đi", self.launch_ant_colony),
             ("Genetic Algorithm", "Dần cải thiện quần thể lời giải qua các thế hệ", self.launch_genetic),
+            ("So sánh hai thuật toán", "Chạy cả hai thuật toán và phân tích chi tiết kết quả", self.launch_comparison)
         ]
 
         for idx, (title, desc, cmd) in enumerate(algorithms):
@@ -93,6 +95,12 @@ class AlgorithmSelector:
         genetic_root.protocol("WM_DELETE_WINDOW", lambda: self.on_app_closing(genetic_root))
         app = GeneticApp(genetic_root, self.root)
 
+    def launch_comparison(self):
+        """Launch Comparison application"""
+        self.root.withdraw()  # Hide selector window
+        comparison_root = tk.Toplevel(self.root)
+        comparison_root.protocol("WM_DELETE_WINDOW", lambda: self.on_app_closing(comparison_root))
+        app = ComparisonApp(comparison_root, self.root)
 
     def on_app_closing(self, window):
         """Handle app window closing - return to selector"""

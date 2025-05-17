@@ -14,7 +14,7 @@ class ACO_CVRP:
     """Thuật toán Ant Colony Optimization cho bài toán Định tuyến Phương tiện có Giới hạn Tải trọng (CVRP)"""
 
     def __init__(self, cvrp, num_ants=20, alpha=1.0, beta=2.0, rho=0.5, q=100, max_iterations=100,
-                 min_max_aco=False, local_search=False, elitist_ants=0):
+                 min_max_aco=False, local_search=False, elitist_ants=0, initial_pheromone=1.0):
         """
         Khởi tạo thuật toán ACO cho CVRP
 
@@ -29,6 +29,7 @@ class ACO_CVRP:
         min_max_aco -- Sử dụng biến thể MIN-MAX Ant System
         local_search -- Sử dụng tìm kiếm cục bộ
         elitist_ants -- Số lượng kiến ưu tú
+        initial_pheromone -- Giá trị pheromone khởi tạo ban đầu
         """
         self.cvrp = cvrp
         self.num_ants = num_ants
@@ -40,12 +41,13 @@ class ACO_CVRP:
         self.min_max_aco = min_max_aco
         self.local_search = local_search
         self.elitist_ants = elitist_ants
+        self.initial_pheromone = initial_pheromone
 
         # Số lượng khách hàng
         self.n = len(cvrp.customers)
 
         # Khởi tạo ma trận pheromone
-        self.pheromone = np.ones((self.n, self.n))
+        self.pheromone = np.ones((self.n, self.n)) * self.initial_pheromone
 
         # Khởi tạo giá trị pheromone tối thiểu và tối đa (cho MIN-MAX ACO)
         self.max_pheromone = 1.0
@@ -117,6 +119,7 @@ class ACO_CVRP:
                 while self.paused and not self.stop_flag:
                     self.pause_condition.wait()
 
+            # Đo thời gian tính toán thuần túy bắt đầu (không bao gồm thời gian UI)
             start_time = time.time()
             self.current_iteration = iteration
 
@@ -156,42 +159,45 @@ class ACO_CVRP:
                 'min': np.min(self.pheromone),
             }
 
-            # Lưu lịch sử
+            # Lưu lịch sử và kết thúc đo thời gian tính toán thuần túy
             end_time = time.time()
+            computation_time = end_time - start_time
+            self.time_history.append(computation_time)
             self.cost_history.append(self.best_cost)
             self.avg_cost_history.append(avg_cost)
             self.worst_cost_history.append(worst_cost)
             self.pheromone_stats_history.append(pheromone_stats)
-            self.time_history.append(end_time - start_time)
 
-            # Gọi hàm callback cho mỗi bước
+            # Lấy giải pháp hiện tại tốt nhất trong quần thể kiến
+            current_best_idx = np.argmin(ant_costs)
+            current_solution = ant_solutions[current_best_idx]
+            current_cost = ant_costs[current_best_idx]
+            self.current_solution = current_solution
+            self.current_cost = current_cost
+
+            # Gọi callback từng bước và truyền thời gian tính toán thuần túy
             if step_callback:
-                iteration_best_idx = np.argmin(ant_costs)
-                self.current_solution = ant_solutions[iteration_best_idx]
-                self.current_cost = ant_costs[iteration_best_idx]
-
-                step_data = {
-                    'iteration': iteration,
-                    'progress': (iteration + 1) / self.max_iterations,
-                    'solution': self.current_solution,
-                    'cost': self.current_cost,
+                progress = (iteration + 1) / self.max_iterations
+                data = {
+                    'iteration': iteration + 1,
+                    'progress': progress,
+                    'solution': current_solution,
+                    'cost': current_cost,
                     'best_solution': self.best_solution,
                     'best_cost': self.best_cost,
                     'avg_cost': avg_cost,
                     'worst_cost': worst_cost,
-                    'pheromone': self.pheromone.copy(),
-                    'avg_pheromone': pheromone_stats['avg'],
-                    'max_pheromone': pheromone_stats['max'],
-                    'min_pheromone': pheromone_stats['min'],
-                    'cost_history': self.cost_history.copy(),
-                    'avg_cost_history': self.avg_cost_history.copy(),
-                    'worst_cost_history': self.worst_cost_history.copy(),
-                    'time_history': self.time_history.copy()
+                    'pheromone': self.pheromone,
+                    'cost_history': self.cost_history,
+                    'computation_time': computation_time,  # Thời gian tính toán thuần túy
                 }
-                step_callback(step_data)
+                should_stop = step_callback(data)
+                if should_stop:
+                    self.was_stopped = True
+                    break
 
         # Gọi callback khi hoàn thành
-        if callback:
+        if callback and not self.was_stopped:
             callback((self.best_solution, self.best_cost))
 
         return self.best_solution, self.best_cost
@@ -432,54 +438,33 @@ class ACO_CVRP:
         Trả về:
         Tuyến cải tiến
         """
+        if not route or len(route) < 2:
+            return route
+
         best_route = route.copy()
         improved = True
 
         while improved:
             improved = False
-            best_distance = self.calculate_route_distance(best_route)
+            best_distance = self.cvrp.calculate_route_distance(best_route)
 
-            for i in range(len(route) - 1):
-                for j in range(i + 1, len(route)):
-                    new_route = best_route.copy()
-                    # Đảo ngược đoạn từ i đến j
-                    new_route[i:j+1] = reversed(new_route[i:j+1])
-                    new_distance = self.calculate_route_distance(new_route)
+            for i in range(len(best_route) - 1):
+                for j in range(i + 1, len(best_route)):
+                    if j - i < 1:
+                        continue
 
-                    if new_distance < best_distance:
+                    new_route = best_route[:i+1] + best_route[i+1:j+1][::-1] + best_route[j+1:]
+                    current_distance = self.cvrp.calculate_route_distance(new_route)
+
+                    if current_distance < best_distance:
                         best_route = new_route
-                        best_distance = new_distance
+                        best_distance = current_distance
                         improved = True
-
-            # Để tránh chạy quá lâu, ngắt nếu đã có cải thiện
-            if improved:
+            
+            if not improved:
                 break
-
+        
         return best_route
-
-    def calculate_route_distance(self, route):
-        """
-        Tính tổng khoảng cách cho một tuyến (bao gồm từ/đến depot)
-
-        Tham số:
-        route -- Tuyến đường
-
-        Trả về:
-        Tổng khoảng cách
-        """
-        distance = 0
-
-        # Khoảng cách từ depot đến khách hàng đầu tiên
-        distance += self.cvrp.distances[0, route[0]]
-
-        # Khoảng cách giữa các khách hàng
-        for i in range(len(route) - 1):
-            distance += self.cvrp.distances[route[i], route[i+1]]
-
-        # Khoảng cách từ khách hàng cuối cùng về depot
-        distance += self.cvrp.distances[route[-1], 0]
-
-        return distance
 
     def stop(self):
         """Dừng thuật toán"""

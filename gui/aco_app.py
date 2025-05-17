@@ -11,6 +11,8 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import os
+import datetime
 
 from core import CVRP, ACO_CVRP
 from .visualization import ACOVisualization
@@ -41,6 +43,10 @@ class AntColonyApp:
         self.min_max_aco = False  # Mới: chế độ MMAS
         self.local_search = False  # Mới: tìm kiếm cục bộ
         self.elitist_ants = 0      # Mới: số kiến ưu tú
+        
+        # Thêm tham số nâng cao mới
+        self.initial_pheromone = 1.0  # Giá trị pheromone ban đầu
+        self.min_max_ratio = 0.5   # Tỷ lệ min/max cho MMAS
 
         self.algorithm = None
         self.algorithm_thread = None
@@ -212,23 +218,62 @@ class AntColonyApp:
             messagebox.showwarning("Cảnh báo", "Chưa có dữ liệu phân tích để xuất")
             return
 
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-            title="Xuất dữ liệu phân tích"
-        )
+        # Tạo thư mục results nếu chưa tồn tại
+        results_dir = os.path.join(os.getcwd(), "results")
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+            
+        # Tạo tên subfolder dựa trên thời gian
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        subfolder_name = f"aco_analysis_{timestamp}"
+        subfolder_path = os.path.join(results_dir, subfolder_name)
+        
+        # Tạo subfolder
+        if not os.path.exists(subfolder_path):
+            os.makedirs(subfolder_path)
 
-        if filename:
+        # Tạo file CSV trong subfolder
+        filepath = os.path.join(subfolder_path, "convergence_data.csv")
+        
+        try:
+            with open(filepath, 'w') as f:
+                f.write("Vòng lặp,Chi phí tốt nhất,Chi phí trung bình,Chi phí xấu nhất," +
+                       "Pheromone trung bình,Pheromone lớn nhất,Pheromone nhỏ nhất\n")
+                for i, data in enumerate(self.convergence_data):
+                    f.write(f"{i},{data['best']},{data.get('avg', 0)},{data.get('worst', 0)}," +
+                           f"{data.get('avg_pheromone', 0)},{data.get('max_pheromone', 0)},{data.get('min_pheromone', 0)}\n")
+            
+            # Lưu biểu đồ hội tụ
             try:
-                with open(filename, 'w') as f:
-                    f.write("Vòng lặp,Chi phí tốt nhất,Chi phí trung bình,Chi phí xấu nhất," +
-                           "Pheromone trung bình,Pheromone lớn nhất,Pheromone nhỏ nhất\n")
-                    for i, data in enumerate(self.convergence_data):
-                        f.write(f"{i},{data['best']},{data.get('avg', 0)},{data.get('worst', 0)}," +
-                               f"{data.get('avg_pheromone', 0)},{data.get('max_pheromone', 0)},{data.get('min_pheromone', 0)}\n")
-                messagebox.showinfo("Thông báo", f"Đã xuất dữ liệu phân tích vào {filename}")
+                plt.figure(figsize=(10, 6))
+                
+                # Dữ liệu cho biểu đồ
+                iterations = list(range(len(self.convergence_data)))
+                best_costs = [data['best'] for data in self.convergence_data]
+                avg_costs = [data['avg'] for data in self.convergence_data]
+                worst_costs = [data['worst'] for data in self.convergence_data]
+                
+                # Vẽ đường
+                plt.plot(iterations, best_costs, 'g-', label='Tốt nhất')
+                plt.plot(iterations, avg_costs, 'b-', label='Trung bình')
+                plt.plot(iterations, worst_costs, 'r-', label='Xấu nhất')
+                
+                plt.title("Chi phí qua các vòng lặp")
+                plt.xlabel("Vòng lặp")
+                plt.ylabel("Chi phí")
+                plt.legend()
+                plt.grid(True)
+                
+                chart_filepath = os.path.join(subfolder_path, "convergence_chart.png")
+                plt.savefig(chart_filepath)
+                plt.close()
             except Exception as e:
-                messagebox.showerror("Lỗi", f"Không thể xuất dữ liệu: {str(e)}")
+                messagebox.showwarning("Cảnh báo", f"Không thể lưu biểu đồ: {str(e)}")
+                
+            messagebox.showinfo("Thông báo", f"Đã xuất dữ liệu phân tích vào {subfolder_path}")
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể xuất dữ liệu: {str(e)}")
 
     def add_return_button(self):
         """Thêm nút quay lại màn hình chọn thuật toán"""
@@ -352,26 +397,44 @@ class AntColonyApp:
         iterations_entry.pack(fill=tk.X, padx=5, pady=2)
         ToolTip(iterations_entry, "Số vòng lặp tối đa thuật toán sẽ thực hiện")
 
-        # Tham số nâng cao
-        advanced_frame = ttk.LabelFrame(algo_notebook, text="Tính năng nâng cao")
-        advanced_frame.pack(fill=tk.X, padx=5, pady=5)
-
+        # Tham số nâng cao - Sử dụng advanced_frame đã tạo
+        advanced_settings_frame = ttk.LabelFrame(advanced_frame, text="Tính năng nâng cao")
+        advanced_settings_frame.pack(fill=tk.X, padx=5, pady=5)
+        
         # MIN-MAX ACO
         self.min_max_var = tk.BooleanVar(value=self.min_max_aco)
-        min_max_check = ttk.Checkbutton(advanced_frame, text="MIN-MAX ACO",
+        min_max_check = ttk.Checkbutton(advanced_settings_frame, text="MIN-MAX ACO",
                                        variable=self.min_max_var)
         min_max_check.pack(anchor=tk.W, padx=5, pady=2)
         ToolTip(min_max_check, "Phiên bản cải tiến ACO giới hạn pheromone trong khoảng [min, max] để tránh hội tụ sớm")
+        
+        # Giá trị pheromone ban đầu
+        pheromone_frame = ttk.Frame(advanced_settings_frame)
+        pheromone_frame.pack(fill=tk.X, padx=5, pady=2)
+        ttk.Label(pheromone_frame, text="Pheromone ban đầu:").pack(side=tk.LEFT)
+        self.initial_pheromone_var = tk.StringVar(value=str(self.initial_pheromone))
+        initial_pheromone_entry = ttk.Entry(pheromone_frame, textvariable=self.initial_pheromone_var, width=10)
+        initial_pheromone_entry.pack(side=tk.LEFT, padx=5)
+        ToolTip(initial_pheromone_entry, "Giá trị pheromone ban đầu trên tất cả các cạnh")
+        
+        # Tỷ lệ min/max cho MMAS
+        minmax_frame = ttk.Frame(advanced_settings_frame)
+        minmax_frame.pack(fill=tk.X, padx=5, pady=2)
+        ttk.Label(minmax_frame, text="Tỷ lệ min/max:").pack(side=tk.LEFT)
+        self.min_max_ratio_var = tk.StringVar(value=str(self.min_max_ratio))
+        min_max_ratio_entry = ttk.Entry(minmax_frame, textvariable=self.min_max_ratio_var, width=10)
+        min_max_ratio_entry.pack(side=tk.LEFT, padx=5)
+        ToolTip(min_max_ratio_entry, "Tỷ lệ giữa giá trị pheromone tối thiểu và tối đa (0-1) cho MMAS")
 
         # Local Search
         self.local_search_var = tk.BooleanVar(value=self.local_search)
-        local_search_check = ttk.Checkbutton(advanced_frame, text="Tìm kiếm cục bộ", 
+        local_search_check = ttk.Checkbutton(advanced_settings_frame, text="Tìm kiếm cục bộ", 
                                            variable=self.local_search_var)
         local_search_check.pack(anchor=tk.W, padx=5, pady=2)
         ToolTip(local_search_check, "Áp dụng thuật toán 2-opt để cải thiện mỗi tuyến đường sau khi tạo lời giải")
 
         # Elitist Ants
-        elitist_frame = ttk.Frame(advanced_frame)
+        elitist_frame = ttk.Frame(advanced_settings_frame)
         elitist_frame.pack(fill=tk.X, padx=5, pady=2)
         ttk.Label(elitist_frame, text="Số kiến ưu tú:").pack(side=tk.LEFT)
         self.elitist_ants_var = tk.StringVar(value=str(self.elitist_ants))
@@ -380,8 +443,8 @@ class AntColonyApp:
         ToolTip(elitist_ants_entry, "Số kiến ưu tú được phép đặt thêm pheromone trên tuyến đường tốt nhất (0 để vô hiệu hóa)")
 
         # Thêm thông báo về tính năng nâng cao
-        note_label = ttk.Label(advanced_frame, 
-                             text="Các tính năng nâng cao đã được kích hoạt và sẽ ảnh hưởng đến hiệu suất thuật toán",
+        note_label = ttk.Label(advanced_settings_frame, 
+                             text="Các tính năng nâng cao sẽ ảnh hưởng đến hiệu suất và kết quả của thuật toán",
                              wraplength=250, justify=tk.LEFT)
         note_label.pack(fill=tk.X, padx=5, pady=10)
 
@@ -472,26 +535,102 @@ class AntColonyApp:
             messagebox.showwarning("Cảnh báo", "Chưa có kết quả để lưu")
             return
 
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="Lưu kết quả"
-        )
+        # Tạo thư mục results nếu chưa tồn tại
+        results_dir = os.path.join(os.getcwd(), "results")
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+            
+        # Tạo tên subfolder dựa trên thời gian
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        subfolder_name = f"aco_results_{timestamp}"
+        subfolder_path = os.path.join(results_dir, subfolder_name)
+        
+        # Tạo subfolder
+        if not os.path.exists(subfolder_path):
+            os.makedirs(subfolder_path)
 
-        if filename:
-            try:
-                with open(filename, 'w') as f:
-                    f.write(f"Bài toán CVRP - Kết quả từ Ant Colony Optimization\n")
-                    f.write(f"Số khách hàng: {self.n_customers}\n")
-                    f.write(f"Trọng lượng xe: {self.capacity}\n\n")
-                    f.write(f"Chi phí tốt nhất: {self.best_cost_var.get()}\n")
-                    f.write(f"Số lượng tuyến: {self.route_count_var.get()}\n")
-                    f.write(f"Thời gian thực thi: {self.execution_time_var.get()}\n\n")
-                    f.write(f"Giải pháp chi tiết:\n")
-                    f.write(self.solution_text.get(1.0, tk.END))
-                messagebox.showinfo("Thông báo", f"Đã lưu kết quả vào {filename}")
-            except Exception as e:
-                messagebox.showerror("Lỗi", f"Không thể lưu kết quả: {str(e)}")
+        # Tạo file kết quả trong subfolder
+        filepath = os.path.join(subfolder_path, "results.txt")
+        
+        try:
+            with open(filepath, 'w', encoding="utf-8") as f:
+                f.write(f"Bài toán CVRP - Kết quả từ Ant Colony Optimization\n")
+                f.write(f"Số khách hàng: {self.n_customers}\n")
+                f.write(f"Trọng lượng xe: {self.capacity}\n\n")
+                
+                # Thêm thông tin về tham số thuật toán
+                f.write(f"THAM SỐ THUẬT TOÁN\n")
+                f.write(f"Số lượng kiến: {self.n_ants}\n")
+                f.write(f"Alpha: {self.alpha}\n")
+                f.write(f"Beta: {self.beta}\n")
+                f.write(f"Rho: {self.rho}\n")
+                f.write(f"Q: {self.q}\n")
+                f.write(f"Số vòng lặp: {self.iterations}\n")
+                
+                # Thông tin tham số nâng cao
+                f.write(f"\nTHAM SỐ NÂNG CAO\n")
+                f.write(f"MIN-MAX ACO: {self.min_max_aco}\n")
+                f.write(f"Tìm kiếm cục bộ: {self.local_search}\n")
+                f.write(f"Số kiến ưu tú: {self.elitist_ants}\n")
+                f.write(f"Pheromone ban đầu: {self.initial_pheromone}\n")
+                f.write(f"Tỷ lệ min/max: {self.min_max_ratio}\n\n")
+                
+                # Kết quả
+                f.write(f"KẾT QUẢ\n")
+                f.write(f"Chi phí tốt nhất: {self.best_cost_var.get()}\n")
+                f.write(f"Số lượng tuyến: {self.route_count_var.get()}\n")
+                f.write(f"Thời gian thực thi: {self.execution_time_var.get()}\n\n")
+                f.write(f"Giải pháp chi tiết:\n")
+                f.write(self.solution_text.get(1.0, tk.END))
+                
+            # Nếu có lời giải và CVRP, lưu hình ảnh tuyến đường
+            if hasattr(self, 'algorithm') and self.algorithm and self.cvrp:
+                try:
+                    # Lưu biểu đồ hội tụ
+                    if self.convergence_data:
+                        plt.figure(figsize=(10, 6))
+                        iterations = list(range(1, len(self.convergence_data) + 1))
+                        best_costs = [data['best'] for data in self.convergence_data]
+                        avg_costs = [data['avg'] for data in self.convergence_data]
+                        worst_costs = [data['worst'] for data in self.convergence_data]
+                        
+                        # Vẽ đường
+                        plt.plot(iterations, best_costs, 'g-', label='Tốt nhất')
+                        plt.plot(iterations, avg_costs, 'b-', label='Trung bình')
+                        plt.plot(iterations, worst_costs, 'r-', label='Xấu nhất')
+                        
+                        plt.title(f"Chi phí qua các vòng lặp")
+                        plt.xlabel("Vòng lặp")
+                        plt.ylabel("Chi phí")
+                        plt.legend()
+                        plt.grid(True)
+                        
+                        chart_filepath = os.path.join(subfolder_path, "convergence_chart.png")
+                        plt.savefig(chart_filepath)
+                        plt.close()
+                        
+                    # Lưu hình ảnh tuyến đường
+                    if hasattr(self.visualization, 'fig'):
+                        route_filepath = os.path.join(subfolder_path, "routes.png")
+                        self.visualization.fig.savefig(route_filepath)
+                        
+                    # Lưu hình ảnh pheromone
+                    if hasattr(self.visualization, 'create_pheromone_heatmap'):
+                        try:
+                            pheromone_fig = self.visualization.create_pheromone_heatmap()
+                            pheromone_filepath = os.path.join(subfolder_path, "pheromone.png")
+                            pheromone_fig.savefig(pheromone_filepath)
+                            plt.close(pheromone_fig)
+                        except Exception as e:
+                            print(f"Không thể lưu bản đồ pheromone: {str(e)}")
+                        
+                except Exception as e:
+                    print(f"Lỗi khi lưu hình ảnh: {str(e)}")
+                
+            messagebox.showinfo("Thành công", f"Đã lưu kết quả vào thư mục {subfolder_path}")
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể lưu kết quả: {str(e)}")
 
     def generate_problem(self):
         """Tạo bài toán CVRP dựa trên tùy chọn người dùng"""
@@ -600,9 +739,8 @@ class AntColonyApp:
                 messagebox.showerror("Lỗi", "Không thể tải file")
 
     def update_parameters(self):
-        """Cập nhật tham số từ giao diện"""
+        """Cập nhật các tham số thuật toán từ giao diện"""
         try:
-            # Tham số cơ bản
             self.n_customers = int(self.customer_count.get())
             self.capacity = int(self.capacity_var.get())
             self.n_ants = int(self.ant_count.get())
@@ -611,102 +749,47 @@ class AntColonyApp:
             self.rho = float(self.rho_var.get())
             self.q = float(self.q_var.get())
             self.iterations = int(self.iterations_var.get())
-
-            # Tham số nâng cao
-            prev_min_max = self.min_max_aco
-            prev_local_search = self.local_search
-            prev_elitist_ants = self.elitist_ants
-            
-            self.min_max_aco = bool(self.min_max_var.get())
-            self.local_search = bool(self.local_search_var.get())
+            self.min_max_aco = self.min_max_var.get()
+            self.local_search = self.local_search_var.get()
             self.elitist_ants = int(self.elitist_ants_var.get())
             
-            # Thông báo khi tính năng nâng cao được kích hoạt
-            changes = []
-            if self.min_max_aco != prev_min_max and self.min_max_aco:
-                changes.append("MIN-MAX ACO")
-            if self.local_search != prev_local_search and self.local_search:
-                changes.append("Tìm kiếm cục bộ")
-            if self.elitist_ants != prev_elitist_ants and self.elitist_ants > 0:
-                changes.append(f"Kiến ưu tú ({self.elitist_ants})")
-                
-            if changes:
-                messagebox.showinfo("Tính năng nâng cao", f"Đã kích hoạt: {', '.join(changes)}")
+            self.initial_pheromone = float(self.initial_pheromone_var.get())
+            self.min_max_ratio = float(self.min_max_ratio_var.get())
 
-            # Kiểm tra giới hạn
-            if self.n_customers < 5:
-                self.n_customers = 5
-                self.customer_count.set("5")
-            elif self.n_customers > 200:
-                self.n_customers = 200
-                self.customer_count.set("200")
-
-            if self.capacity < 50:
-                self.capacity = 50
-                self.capacity_var.set("50")
-
-            if self.n_ants < 1:
-                self.n_ants = 1
-                self.ant_count.set("1")
-            elif self.n_ants > 100:
-                self.n_ants = 100
-                self.ant_count.set("100")
-
-            if self.alpha < 0:
-                self.alpha = 0
-                self.alpha_var.set("0")
-            elif self.alpha > 10:
-                self.alpha = 10
-                self.alpha_var.set("10")
-
-            if self.beta < 0:
-                self.beta = 0
-                self.beta_var.set("0")
-            elif self.beta > 10:
-                self.beta = 10
-                self.beta_var.set("10")
-
-            if self.rho < 0 or self.rho > 1:
-                self.rho = max(0, min(1, self.rho))
-                self.rho_var.set(str(self.rho))
-
-            if self.q < 0:
-                self.q = 0
-                self.q_var.set("0")
-
-            if self.iterations < 1:
-                self.iterations = 1
-                self.iterations_var.set("1")
-                
-            # Kiểm tra giới hạn tham số nâng cao
+            # Kiểm tra các giá trị không hợp lệ
+            if self.n_customers <= 0:
+                messagebox.showerror("Lỗi tham số", "Số lượng khách hàng phải lớn hơn 0.")
+                return False
+            if self.capacity <= 0:
+                messagebox.showerror("Lỗi tham số", "Sức chứa của xe phải lớn hơn 0.")
+                return False
+            if self.n_ants <= 0:
+                messagebox.showerror("Lỗi tham số", "Số lượng kiến phải lớn hơn 0.")
+                return False
+            if not (0 <= self.rho <= 1):
+                messagebox.showerror("Lỗi tham số", "Tỷ lệ bay hơi (rho) phải nằm trong khoảng [0, 1].")
+                return False
+            if self.iterations <= 0:
+                messagebox.showerror("Lỗi tham số", "Số vòng lặp phải lớn hơn 0.")
+                return False
             if self.elitist_ants < 0:
-                self.elitist_ants = 0
-                self.elitist_ants_var.set("0")
-            elif self.elitist_ants > self.n_ants // 2:
-                self.elitist_ants = self.n_ants // 2
-                self.elitist_ants_var.set(str(self.elitist_ants))
-
+                messagebox.showerror("Lỗi tham số", "Số kiến ưu tú không được âm.")
+                return False
+            if self.initial_pheromone <= 0:
+                messagebox.showerror("Lỗi tham số", "Pheromone ban đầu phải lớn hơn 0.")
+                return False
+            if not (0 < self.min_max_ratio <= 1) and self.min_max_aco:
+                messagebox.showerror("Lỗi tham số", "Tỷ lệ Min-Max phải nằm trong khoảng (0, 1] khi MMAS được kích hoạt.")
+                return False
+                
+            # Thông báo khi các tham số nâng cao được thay đổi
+            # (Phần này có thể được mở rộng để chỉ thông báo khi có thay đổi thực sự)
+            # messagebox.showinfo("Thông báo", "Các tham số nâng cao đã được cập nhật.")
+            
+            return True
         except ValueError:
-            messagebox.showerror("Lỗi", "Tham số không hợp lệ, sử dụng giá trị mặc định")
-            self.n_ants = 20
-            self.alpha = 1.0
-            self.beta = 2.0
-            self.rho = 0.5
-            self.q = 100
-            self.iterations = 50
-            self.min_max_aco = False
-            self.local_search = False
-            self.elitist_ants = 0
-
-            self.ant_count.set(str(self.n_ants))
-            self.alpha_var.set(str(self.alpha))
-            self.beta_var.set(str(self.beta))
-            self.rho_var.set(str(self.rho))
-            self.q_var.set(str(self.q))
-            self.iterations_var.set(str(self.iterations))
-            self.min_max_var.set(self.min_max_aco)
-            self.local_search_var.set(self.local_search)
-            self.elitist_ants_var.set(str(self.elitist_ants))
+            messagebox.showerror("Lỗi đầu vào", "Vui lòng nhập giá trị số hợp lệ cho các tham số.")
+            return False
 
     def start_algorithm(self):
         """Bắt đầu thuật toán"""
@@ -725,7 +808,25 @@ class AntColonyApp:
         self.progress['maximum'] = 100
         self.progress_label.config(text="0%")
 
-        # Khởi tạo thuật toán - chỉ sử dụng các tham số được hỗ trợ bởi ACO_CVRP
+        # Tham số ACO
+        params = {
+            'ants': self.n_ants,
+            'alpha': self.alpha,
+            'beta': self.beta,
+            'rho': self.rho,
+            'q': self.q,
+            'iterations': self.iterations,
+            'min_max_aco': self.min_max_aco,
+            'local_search': self.local_search,
+            'elitist_ants': self.elitist_ants,
+            'initial_pheromone': self.initial_pheromone,
+            'min_max_ratio': self.min_max_ratio
+        }
+        
+        # Log thông tin về tham số đã chọn
+        print(f"Khởi tạo ACO với tham số: {params}")
+
+        # Khởi tạo thuật toán
         self.algorithm = ACO_CVRP(
             cvrp=self.cvrp,
             num_ants=self.n_ants,
@@ -737,9 +838,10 @@ class AntColonyApp:
             # Thêm các tham số nâng cao
             min_max_aco=self.min_max_aco,
             local_search=self.local_search,
-            elitist_ants=self.elitist_ants
+            elitist_ants=self.elitist_ants,
+            initial_pheromone=self.initial_pheromone
         )
-
+        
         # Thiết lập trực quan hóa
         self.visualization.set_algorithm(self.algorithm)
         self.visualization.set_cvrp(self.cvrp)
@@ -957,6 +1059,16 @@ class AntColonyApp:
 
             self.solution_text.delete(1.0, tk.END)
             self.solution_text.insert(tk.END, solution_str)
+            
+            # Cập nhật dữ liệu cho trực quan hóa để xuất kết quả
+            elapsed_time = time.time() - self.start_time
+            self.visualization.best_solution = best_solution
+            self.visualization.best_cost = best_cost
+            self.visualization.execution_time = elapsed_time
+            self.visualization.cost_history = [data['best'] for data in self.convergence_data]
+            
+            # Gán thuật toán cho trực quan hóa
+            self.visualization.set_algorithm(self.algorithm)
 
     def stop_algorithm(self):
         """Dừng thuật toán"""

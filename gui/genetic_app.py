@@ -11,6 +11,8 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import os
+import datetime
 
 from core import CVRP, GeneticAlgorithm_CVRP
 from .visualization import GeneticVisualization
@@ -44,6 +46,7 @@ class GeneticApp:
         self.tournament_size = 3
         self.early_stopping = 20
         self.early_stopping_enabled = True
+        self.local_search = False
 
         self.algorithm = None
         self.algorithm_thread = None
@@ -203,21 +206,60 @@ class GeneticApp:
             messagebox.showwarning("Cảnh báo", "Chưa có dữ liệu phân tích để xuất")
             return
 
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".csv",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-            title="Xuất dữ liệu phân tích"
-        )
+        # Tạo thư mục results nếu chưa tồn tại
+        results_dir = os.path.join(os.getcwd(), "results")
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+            
+        # Tạo tên subfolder dựa trên thời gian
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        subfolder_name = f"ga_analysis_{timestamp}"
+        subfolder_path = os.path.join(results_dir, subfolder_name)
+        
+        # Tạo subfolder
+        if not os.path.exists(subfolder_path):
+            os.makedirs(subfolder_path)
 
-        if filename:
+        # Tạo file CSV trong subfolder
+        filepath = os.path.join(subfolder_path, "convergence_data.csv")
+        
+        try:
+            with open(filepath, 'w') as f:
+                f.write("Thế hệ,Chi phí tốt nhất,Chi phí trung bình,Chi phí xấu nhất,Độ đa dạng\n")
+                for i, data in enumerate(self.convergence_data):
+                    f.write(f"{i},{data['best']},{data['avg']},{data['worst']},{data['diversity']}\n")
+            
+            # Lưu biểu đồ hội tụ
             try:
-                with open(filename, 'w') as f:
-                    f.write("Thế hệ,Chi phí tốt nhất,Chi phí trung bình,Chi phí xấu nhất,Độ đa dạng\n")
-                    for i, data in enumerate(self.convergence_data):
-                        f.write(f"{i},{data['best']},{data['avg']},{data['worst']},{data['diversity']}\n")
-                messagebox.showinfo("Thông báo", f"Đã xuất dữ liệu phân tích vào {filename}")
+                plt.figure(figsize=(10, 6))
+                
+                # Dữ liệu cho biểu đồ
+                generations = list(range(len(self.convergence_data)))
+                best_costs = [data['best'] for data in self.convergence_data]
+                avg_costs = [data['avg'] for data in self.convergence_data]
+                worst_costs = [data['worst'] for data in self.convergence_data]
+                
+                # Vẽ đường
+                plt.plot(generations, best_costs, 'g-', label='Tốt nhất')
+                plt.plot(generations, avg_costs, 'b-', label='Trung bình')
+                plt.plot(generations, worst_costs, 'r-', label='Xấu nhất')
+                
+                plt.title("Chi phí qua các thế hệ")
+                plt.xlabel("Thế hệ")
+                plt.ylabel("Chi phí")
+                plt.legend()
+                plt.grid(True)
+                
+                chart_filepath = os.path.join(subfolder_path, "convergence_chart.png")
+                plt.savefig(chart_filepath)
+                plt.close()
             except Exception as e:
-                messagebox.showerror("Lỗi", f"Không thể xuất dữ liệu: {str(e)}")
+                messagebox.showwarning("Cảnh báo", f"Không thể lưu biểu đồ: {str(e)}")
+                
+            messagebox.showinfo("Thông báo", f"Đã xuất dữ liệu phân tích vào {subfolder_path}")
+            
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể xuất dữ liệu: {str(e)}")
 
     def add_return_button(self):
         """Thêm nút quay lại màn hình chọn thuật toán"""
@@ -381,6 +423,16 @@ class GeneticApp:
                                    width=5)
         early_stop_entry.pack(side=tk.LEFT, padx=5)
         ToolTip(early_stop_entry, "Số thế hệ không cải thiện để dừng thuật toán")
+        
+        # Tìm kiếm cục bộ
+        local_search_frame = ttk.Frame(advanced_frame)
+        local_search_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        self.local_search_var = tk.BooleanVar(value=self.local_search)
+        local_search_check = ttk.Checkbutton(local_search_frame, text="Tìm kiếm cục bộ 2-opt",
+                                            variable=self.local_search_var)
+        local_search_check.pack(side=tk.LEFT, padx=5)
+        ToolTip(local_search_check, "Áp dụng tìm kiếm cục bộ 2-opt để cải thiện giải pháp sau mỗi thế hệ")
 
         # Thêm thông báo về tính năng nâng cao
         note_label = ttk.Label(advanced_frame, 
@@ -486,26 +538,59 @@ class GeneticApp:
             messagebox.showwarning("Cảnh báo", "Chưa có kết quả để lưu")
             return
 
-        filename = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="Lưu kết quả"
-        )
+        # Tạo thư mục results nếu chưa tồn tại
+        results_dir = os.path.join(os.getcwd(), "results")
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+            
+        # Tạo tên subfolder dựa trên thời gian
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        subfolder_name = f"ga_results_{timestamp}"
+        subfolder_path = os.path.join(results_dir, subfolder_name)
+        
+        # Tạo subfolder
+        if not os.path.exists(subfolder_path):
+            os.makedirs(subfolder_path)
 
-        if filename:
-            try:
-                with open(filename, 'w') as f:
-                    f.write(f"Bài toán CVRP - Kết quả từ Thuật toán Di truyền\n")
-                    f.write(f"Số khách hàng: {self.n_customers}\n")
-                    f.write(f"Trọng lượng xe: {self.capacity}\n\n")
-                    f.write(f"Chi phí tốt nhất: {self.best_cost_var.get()}\n")
-                    f.write(f"Số lượng tuyến: {self.route_count_var.get()}\n")
-                    f.write(f"Thời gian thực thi: {self.execution_time_var.get()}\n\n")
-                    f.write(f"Giải pháp chi tiết:\n")
-                    f.write(self.solution_text.get(1.0, tk.END))
-                messagebox.showinfo("Thông báo", f"Đã lưu kết quả vào {filename}")
-            except Exception as e:
-                messagebox.showerror("Lỗi", f"Không thể lưu kết quả: {str(e)}")
+        # Tạo file kết quả trong subfolder
+        filepath = os.path.join(subfolder_path, "results.txt")
+        
+        try:
+            with open(filepath, 'w', encoding="utf-8") as f:
+                f.write(f"Bài toán CVRP - Kết quả từ Thuật toán Di truyền\n")
+                f.write(f"Số khách hàng: {self.n_customers}\n")
+                f.write(f"Trọng lượng xe: {self.capacity}\n\n")
+                f.write(f"Chi phí tốt nhất: {self.best_cost_var.get()}\n")
+                f.write(f"Số lượng tuyến: {self.route_count_var.get()}\n")
+                f.write(f"Thời gian thực thi: {self.execution_time_var.get()}\n\n")
+                f.write(f"Giải pháp chi tiết:\n")
+                f.write(self.solution_text.get(1.0, tk.END))
+                
+            # Nếu có lời giải và CVRP, lưu hình ảnh tuyến đường
+            if hasattr(self, 'algorithm') and self.algorithm and self.cvrp:
+                try:
+                    # Lưu biểu đồ hội tụ
+                    if self.convergence_data:
+                        plt.figure(figsize=(10, 6))
+                        generations = list(range(len(self.convergence_data)))
+                        best_costs = [data['best'] for data in self.convergence_data]
+                        plt.plot(generations, best_costs, 'g-', label='Tốt nhất')
+                        plt.title("Chi phí tốt nhất qua các thế hệ")
+                        plt.xlabel("Thế hệ")
+                        plt.ylabel("Chi phí")
+                        plt.grid(True)
+                        plt.savefig(os.path.join(subfolder_path, "convergence.png"))
+                        plt.close()
+                    
+                    # Lưu hình ảnh tuyến đường nếu visualization đã được thiết lập
+                    if hasattr(self, 'visualization') and self.visualization:
+                        self.visualization.fig.savefig(os.path.join(subfolder_path, "routes.png"))
+                except Exception as e:
+                    messagebox.showwarning("Cảnh báo", f"Không thể lưu hình ảnh: {str(e)}")
+                
+            messagebox.showinfo("Thông báo", f"Đã lưu kết quả vào {subfolder_path}")
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể lưu kết quả: {str(e)}")
 
     def generate_problem(self):
         """Tạo bài toán CVRP dựa trên tùy chọn người dùng"""
@@ -614,9 +699,10 @@ class GeneticApp:
                 messagebox.showerror("Lỗi", "Không thể tải file")
 
     def update_parameters(self):
-        """Cập nhật tham số từ giao diện"""
+        """Cập nhật các tham số thuật toán từ giao diện"""
         try:
-            # Tham số cơ bản
+            self.n_customers = int(self.customer_count.get())
+            self.capacity = int(self.capacity_var.get())
             self.population_size = int(self.population_size_var.get())
             self.mutation_rate = float(self.mutation_rate_var.get())
             self.crossover_rate = float(self.crossover_rate_var.get())
@@ -624,11 +710,6 @@ class GeneticApp:
             self.max_generations = int(self.generations_var.get())
 
             # Tham số nâng cao
-            prev_selection = self.selection_method
-            prev_crossover = self.crossover_method
-            prev_mutation = self.mutation_method
-            prev_early_stop = self.early_stopping_enabled
-            
             self.selection_method = self.selection_var.get()
             self.crossover_method = self.crossover_method_var.get()
             self.mutation_method = self.mutation_method_var.get()
@@ -636,84 +717,43 @@ class GeneticApp:
             if self.selection_method == "tournament":
                 self.tournament_size = int(self.tournament_size_var.get())
 
-            # Dừng sớm
             self.early_stopping_enabled = self.early_stop_var.get()
             self.early_stopping = int(self.early_stop_gen_var.get())
-            
-            # Thông báo khi tính năng nâng cao được kích hoạt
-            changes = []
-            if self.selection_method != prev_selection:
-                changes.append(f"Phương pháp chọn lọc: {self.selection_method}")
-            if self.crossover_method != prev_crossover:
-                changes.append(f"Phương pháp lai ghép: {self.crossover_method}")
-            if self.mutation_method != prev_mutation:
-                changes.append(f"Phương pháp đột biến: {self.mutation_method}")
-            if self.early_stopping_enabled != prev_early_stop and self.early_stopping_enabled:
-                changes.append(f"Dừng sớm sau {self.early_stopping} thế hệ không cải thiện")
-                
-            if changes:
-                messagebox.showinfo("Tính năng nâng cao", f"Đã kích hoạt: {', '.join(changes)}")
+            self.local_search = self.local_search_var.get()
 
-            # Kiểm tra giới hạn
-            if self.population_size < 10:
-                self.population_size = 10
-                self.population_size_var.set("10")
+            # Kiểm tra các giá trị không hợp lệ
+            if self.n_customers <= 0:
+                messagebox.showerror("Lỗi tham số", "Số lượng khách hàng phải lớn hơn 0.")
+                return False
+            if self.capacity <= 0:
+                messagebox.showerror("Lỗi tham số", "Sức chứa của xe phải lớn hơn 0.")
+                return False
+            if self.population_size <= 0:
+                messagebox.showerror("Lỗi tham số", "Kích thước quần thể phải lớn hơn 0.")
+                return False
+            if not (0 <= self.mutation_rate <= 1):
+                messagebox.showerror("Lỗi tham số", "Tỷ lệ đột biến phải nằm trong khoảng [0, 1].")
+                return False
+            if not (0 <= self.crossover_rate <= 1):
+                messagebox.showerror("Lỗi tham số", "Tỷ lệ lai ghép phải nằm trong khoảng [0, 1].")
+                return False
+            if self.elitism < 0 or self.elitism > self.population_size:
+                messagebox.showerror("Lỗi tham số", "Số cá thể ưu tú phải không âm và không lớn hơn kích thước quần thể.")
+                return False
+            if self.max_generations <= 0:
+                messagebox.showerror("Lỗi tham số", "Số thế hệ tối đa phải lớn hơn 0.")
+                return False
+            if self.selection_method == "tournament" and self.tournament_size <= 0:
+                messagebox.showerror("Lỗi tham số", "Kích thước tournament phải lớn hơn 0.")
+                return False
+            if self.early_stopping_enabled and self.early_stopping <= 0:
+                messagebox.showerror("Lỗi tham số", "Số thế hệ dừng sớm phải lớn hơn 0 khi được kích hoạt.")
+                return False
 
-            if self.max_generations < 1:
-                self.max_generations = 1
-                self.generations_var.set("1")
-
-            if self.mutation_rate < 0 or self.mutation_rate > 1:
-                self.mutation_rate = max(0, min(1, self.mutation_rate))
-                self.mutation_rate_var.set(str(self.mutation_rate))
-
-            if self.crossover_rate < 0 or self.crossover_rate > 1:
-                self.crossover_rate = max(0, min(1, self.crossover_rate))
-                self.crossover_rate_var.set(str(self.crossover_rate))
-
-            if self.elitism < 0:
-                self.elitism = 0
-                self.elitism_var.set("0")
-            elif self.elitism > self.population_size // 2:
-                self.elitism = self.population_size // 2
-                self.elitism_var.set(str(self.elitism))
-
-            if self.tournament_size < 2:
-                self.tournament_size = 2
-                self.tournament_size_var.set("2")
-            elif self.tournament_size > self.population_size // 2:
-                self.tournament_size = self.population_size // 2
-                self.tournament_size_var.set(str(self.tournament_size))
-
-            if self.early_stopping < 5:
-                self.early_stopping = 5
-                self.early_stop_gen_var.set("5")
-
+            return True
         except ValueError:
-            messagebox.showerror("Lỗi", "Tham số không hợp lệ, sử dụng giá trị mặc định")
-            self.population_size = 50
-            self.mutation_rate = 0.1
-            self.crossover_rate = 0.8
-            self.elitism = 5
-            self.max_generations = 100
-            self.selection_method = "tournament"
-            self.crossover_method = "ordered"
-            self.mutation_method = "swap"
-            self.tournament_size = 3
-            self.early_stopping = 20
-            self.early_stopping_enabled = True
-
-            self.population_size_var.set(str(self.population_size))
-            self.mutation_rate_var.set(str(self.mutation_rate))
-            self.crossover_rate_var.set(str(self.crossover_rate))
-            self.elitism_var.set(str(self.elitism))
-            self.generations_var.set(str(self.max_generations))
-            self.selection_var.set(self.selection_method)
-            self.crossover_method_var.set(self.crossover_method)
-            self.mutation_method_var.set(self.mutation_method)
-            self.tournament_size_var.set(str(self.tournament_size))
-            self.early_stop_var.set(self.early_stopping_enabled)
-            self.early_stop_gen_var.set(str(self.early_stopping))
+            messagebox.showerror("Lỗi đầu vào", "Vui lòng nhập giá trị số hợp lệ cho các tham số.")
+            return False
 
     def start_algorithm(self):
         """Bắt đầu thuật toán"""
@@ -745,7 +785,8 @@ class GeneticApp:
             crossover_method=self.crossover_method,
             mutation_method=self.mutation_method,
             tournament_size=self.tournament_size,
-            early_stopping=self.early_stopping if self.early_stopping_enabled else None
+            early_stopping=self.early_stopping if self.early_stopping_enabled else None,
+            local_search=self.local_search
         )
 
         # Thiết lập trực quan hóa
@@ -964,15 +1005,28 @@ class GeneticApp:
         self.best_cost_var.set(f"{best_cost:.2f}")
 
         if best_solution:
-            self.route_count_var.set(str(len(best_solution)))
+            # Cập nhật số tuyến đường
+            non_empty_routes = sum(1 for route in best_solution if route)
+            self.route_count_var.set(str(non_empty_routes))
 
             # Hiển thị giải pháp
             solution_str = ""
             for i, route in enumerate(best_solution):
-                solution_str += f"Tuyến {i + 1}: 0 → {' → '.join(map(str, route))} → 0\n"
+                if route:  # Chỉ hiện tuyến không rỗng
+                    solution_str += f"Tuyến {i + 1}: 0 → {' → '.join(map(str, route))} → 0\n"
 
             self.solution_text.delete(1.0, tk.END)
             self.solution_text.insert(tk.END, solution_str)
+            
+            # Cập nhật dữ liệu cho trực quan hóa để xuất kết quả
+            elapsed_time = time.time() - self.start_time
+            self.visualization.best_solution = best_solution
+            self.visualization.best_cost = best_cost
+            self.visualization.execution_time = elapsed_time
+            self.visualization.cost_history = [data['best'] for data in self.convergence_data]
+            
+            # Gán thuật toán cho trực quan hóa
+            self.visualization.set_algorithm(self.algorithm)
 
     def stop_algorithm(self):
         """Dừng thuật toán"""

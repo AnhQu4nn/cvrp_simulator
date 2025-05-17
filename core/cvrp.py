@@ -170,3 +170,11 @@ class CVRP:
         """Get the list of unvisited customers"""
         all_customers = set(range(1, len(self.customers)))
         return list(all_customers - set(visited))
+
+    def save_to_json(self, filename):
+        """Save CVRP problem to a json file"""
+        return self.save_to_file(filename)
+        
+    def load_from_json(self, filename):
+        """Load CVRP problem from a json file"""
+        return self.load_from_file(filename)
