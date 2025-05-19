@@ -1,0 +1,129 @@
+KẾT QUẢ SO SÁNH THUẬT TOÁN CVRP
+========================================
+
+THÔNG TIN BÀI TOÁN
+--------------------
+Số điểm giao hàng: 199
+Sức chứa xe: 402
+
+THAM SỐ ACO
+--------------------
+Số lượng kiến: 80
+Alpha: 1.0
+Beta: 4.0
+Rho: 0.1
+Q: 250.0
+Số vòng lặp: 250
+Min-Max ACO: True
+Tìm kiếm cục bộ: True
+Số kiến ưu tú: 5
+
+THAM SỐ GA
+--------------------
+Kích thước quần thể: 160
+Tỷ lệ lai ghép: 0.85
+Tỷ lệ đột biến: 0.1
+Số thế hệ: 250
+Kích thước giải đấu: 7
+Số cá thể ưu tú: 10
+Loại lai ghép: ordered
+Loại đột biến: scramble
+Tìm kiếm cục bộ: True
+
+KẾT QUẢ ACO
+--------------------
+Chi phí tốt nhất: 62699.64
+Số xe sử dụng: 37
+Thời gian thực thi: 1333.74 seconds
+
+KẾT QUẢ GA
+--------------------
+Chi phí tốt nhất: 77880.91
+Số xe sử dụng: 37
+Thời gian thực thi: 1332.98 seconds
+
+CHI TIẾT TUYẾN ĐƯỜNG ACO
+--------------------
+Tuyến 1: [76, 142, 4, 109, 14, 17, 55, 26, 186, 92] - Nhu cầu: 402 - Khoảng cách: 987.76
+Tuyến 2: [52, 187, 193, 134, 87, 123, 182, 39, 111, 167] - Nhu cầu: 399 - Khoảng cách: 2514.32
+Tuyến 3: [40, 106, 88, 78, 154, 121, 125] - Nhu cầu: 393 - Khoảng cách: 1076.39
+Tuyến 4: [120, 73, 156, 153, 173, 53] - Nhu cầu: 391 - Khoảng cách: 1834.85
+Tuyến 5: [158, 177, 161, 33, 91, 136] - Nhu cầu: 402 - Khoảng cách: 1501.83
+Tuyến 6: [12, 20, 32, 31, 10] - Nhu cầu: 401 - Khoảng cách: 1310.47
+Tuyến 7: [176, 175, 143, 141, 197, 2] - Nhu cầu: 400 - Khoảng cách: 2072.69
+Tuyến 8: [198, 35, 50, 105, 155] - Nhu cầu: 395 - Khoảng cách: 1632.72
+Tuyến 9: [190, 72, 145, 129, 27] - Nhu cầu: 400 - Khoảng cách: 1237.42
+Tuyến 10: [79, 178, 63, 58, 48] - Nhu cầu: 368 - Khoảng cách: 1463.88
+Tuyến 11: [3, 116, 189, 51, 22] - Nhu cầu: 384 - Khoảng cách: 1532.17
+Tuyến 12: [194, 57, 163, 188, 70] - Nhu cầu: 371 - Khoảng cách: 1481.09
+Tuyến 13: [74, 45, 5, 77, 113] - Nhu cầu: 392 - Khoảng cách: 1424.26
+Tuyến 14: [118, 29, 9, 95, 30] - Nhu cầu: 395 - Khoảng cách: 1933.24
+Tuyến 15: [34, 15, 71, 183, 54, 135] - Nhu cầu: 392 - Khoảng cách: 1666.93
+Tuyến 16: [117, 6, 170, 69, 99] - Nhu cầu: 378 - Khoảng cách: 1818.08
+Tuyến 17: [150, 85, 65, 67, 62] - Nhu cầu: 365 - Khoảng cách: 1171.46
+Tuyến 18: [11, 162, 179, 185, 151] - Nhu cầu: 402 - Khoảng cách: 1677.39
+Tuyến 19: [18, 84, 28, 46, 68] - Nhu cầu: 388 - Khoảng cách: 1562.66
+Tuyến 20: [149, 43, 122, 114, 25] - Nhu cầu: 369 - Khoảng cách: 1950.00
+Tuyến 21: [21, 164, 64, 124] - Nhu cầu: 362 - Khoảng cách: 1705.64
+Tuyến 22: [7, 38, 89, 19, 131] - Nhu cầu: 380 - Khoảng cách: 2035.88
+Tuyến 23: [93, 184, 199, 13, 104] - Nhu cầu: 380 - Khoảng cách: 1681.21
+Tuyến 24: [83, 98, 115, 94, 180] - Nhu cầu: 379 - Khoảng cách: 1600.54
+Tuyến 25: [119, 169, 171, 59, 23] - Nhu cầu: 394 - Khoảng cách: 1498.45
+Tuyến 26: [1, 90, 174, 160, 112] - Nhu cầu: 370 - Khoảng cách: 1636.54
+Tuyến 27: [191, 82, 103, 132, 146] - Nhu cầu: 402 - Khoảng cách: 2018.95
+Tuyến 28: [80, 44, 86, 110, 108] - Nhu cầu: 384 - Khoảng cách: 1635.20
+Tuyến 29: [24, 66, 41, 166, 8] - Nhu cầu: 377 - Khoảng cách: 1750.07
+Tuyến 30: [97, 101, 195, 147, 130] - Nhu cầu: 384 - Khoảng cách: 1792.30
+Tuyến 31: [75, 102, 49, 172, 196] - Nhu cầu: 362 - Khoảng cách: 1682.68
+Tuyến 32: [144, 47, 36, 60] - Nhu cầu: 372 - Khoảng cách: 1821.00
+Tuyến 33: [148, 192, 107, 137, 96] - Nhu cầu: 380 - Khoảng cách: 1964.33
+Tuyến 34: [16, 168, 157, 81, 133] - Nhu cầu: 382 - Khoảng cách: 1869.56
+Tuyến 35: [139, 165, 126, 100, 138] - Nhu cầu: 394 - Khoảng cách: 1922.29
+Tuyến 36: [152, 42, 159, 37, 56] - Nhu cầu: 399 - Khoảng cách: 1938.07
+Tuyến 37: [140, 128, 127, 181, 61] - Nhu cầu: 375 - Khoảng cách: 2297.33
+
+CHI TIẾT TUYẾN ĐƯỜNG GA
+--------------------
+Tuyến 1: [92, 111, 93, 128, 114, 164, 9] - Nhu cầu: 402 - Khoảng cách: 1991.82
+Tuyến 2: [71, 3, 39, 182, 89, 100, 6, 102] - Nhu cầu: 395 - Khoảng cách: 2501.87
+Tuyến 3: [154, 58, 123, 187, 132, 165] - Nhu cầu: 400 - Khoảng cách: 2918.11
+Tuyến 4: [178, 11, 179, 37, 15] - Nhu cầu: 401 - Khoảng cách: 2602.76
+Tuyến 5: [29, 139, 198, 42, 135] - Nhu cầu: 354 - Khoảng cách: 2032.16
+Tuyến 6: [40, 125, 57, 163, 48, 63, 45] - Nhu cầu: 391 - Khoảng cách: 1552.76
+Tuyến 7: [169, 44, 86, 137, 160] - Nhu cầu: 359 - Khoảng cách: 1823.68
+Tuyến 8: [186, 167, 191, 166, 199, 35] - Nhu cầu: 398 - Khoảng cách: 1942.84
+Tuyến 9: [162, 113, 74, 85, 72, 17, 55] - Nhu cầu: 401 - Khoảng cách: 1633.27
+Tuyến 10: [118, 23, 19, 131, 53] - Nhu cầu: 400 - Khoảng cách: 2164.68
+Tuyến 11: [121, 32, 78, 109, 171] - Nhu cầu: 400 - Khoảng cách: 2297.23
+Tuyến 12: [116, 101, 148, 197, 90] - Nhu cầu: 365 - Khoảng cách: 2060.45
+Tuyến 13: [66, 157, 168, 16, 110] - Nhu cầu: 378 - Khoảng cách: 2056.38
+Tuyến 14: [105, 153, 156, 185, 5, 76] - Nhu cầu: 389 - Khoảng cách: 2366.85
+Tuyến 15: [75, 96, 24, 104, 161] - Nhu cầu: 393 - Khoảng cách: 1956.16
+Tuyến 16: [34, 189, 174, 64, 119] - Nhu cầu: 386 - Khoảng cách: 1778.80
+Tuyến 17: [60, 192, 138, 196] - Nhu cầu: 360 - Khoảng cách: 2041.59
+Tuyến 18: [170, 22, 73, 68, 12] - Nhu cầu: 393 - Khoảng cách: 2573.96
+Tuyến 19: [56, 149, 38, 7, 52, 129, 142] - Nhu cầu: 402 - Khoảng cách: 2565.60
+Tuyến 20: [20, 145, 147, 87, 159] - Nhu cầu: 400 - Khoảng cách: 2506.17
+Tuyến 21: [124, 175, 176, 25, 158] - Nhu cầu: 400 - Khoảng cách: 1944.87
+Tuyến 22: [18, 67, 115, 95, 177] - Nhu cầu: 395 - Khoảng cách: 2157.07
+Tuyến 23: [136, 144, 99, 2, 97] - Nhu cầu: 397 - Khoảng cách: 2200.98
+Tuyến 24: [180, 77, 84, 65, 26] - Nhu cầu: 390 - Khoảng cách: 2307.86
+Tuyến 25: [10, 130, 195, 54, 173] - Nhu cầu: 396 - Khoảng cách: 2148.82
+Tuyến 26: [1, 141, 146, 152, 140] - Nhu cầu: 361 - Khoảng cách: 2093.03
+Tuyến 27: [33, 82, 103, 46, 28, 31] - Nhu cầu: 399 - Khoảng cách: 2626.33
+Tuyến 28: [80, 81, 143, 21, 112] - Nhu cầu: 402 - Khoảng cách: 1889.16
+Tuyến 29: [91, 133, 117, 49, 59] - Nhu cầu: 401 - Khoảng cách: 1843.53
+Tuyến 30: [50, 127, 30, 98, 83] - Nhu cầu: 372 - Khoảng cách: 2011.02
+Tuyến 31: [120, 94, 134, 41, 8] - Nhu cầu: 361 - Khoảng cách: 2030.30
+Tuyến 32: [47, 36, 107, 181, 108] - Nhu cầu: 370 - Khoảng cách: 2037.82
+Tuyến 33: [122, 43, 183, 4, 27, 106] - Nhu cầu: 391 - Khoảng cách: 2331.58
+Tuyến 34: [172, 61, 126, 69, 155] - Nhu cầu: 345 - Khoảng cách: 1973.02
+Tuyến 35: [193, 184, 13, 51] - Nhu cầu: 335 - Khoảng cách: 2043.69
+Tuyến 36: [88, 194, 188, 70, 79] - Nhu cầu: 391 - Khoảng cách: 1575.81
+Tuyến 37: [150, 151, 62, 190, 14] - Nhu cầu: 390 - Khoảng cách: 1298.90
+
+SO SÁNH KẾT QUẢ
+--------------------
+Chênh lệch chi phí: 15181.27 (ACO tốt hơn)
+Chênh lệch thời gian: 0.76 seconds
+Thuật toán tốt hơn: ACO

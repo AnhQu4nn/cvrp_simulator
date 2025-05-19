@@ -1,0 +1,14 @@
+Bài toán CVRP - Kết quả từ Thuật toán Di truyền
+Số khách hàng: 15
+Trọng lượng xe: 100
+
+Chi phí tốt nhất: 982.63
+Số lượng tuyến: 4
+Thời gian thực thi: 19.37 giây
+
+Giải pháp chi tiết:
+Tuyến 1: 0 → 2 → 10 → 3 → 0
+Tuyến 2: 0 → 12 → 8 → 6 → 0
+Tuyến 3: 0 → 4 → 7 → 11 → 13 → 0
+Tuyến 4: 0 → 9 → 1 → 14 → 15 → 5 → 0
+

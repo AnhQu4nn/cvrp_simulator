@@ -1,0 +1,65 @@
+KẾT QUẢ SO SÁNH THUẬT TOÁN CVRP
+========================================
+
+THÔNG TIN BÀI TOÁN
+--------------------
+Số điểm giao hàng: 31
+Sức chứa xe: 100
+
+THAM SỐ ACO
+--------------------
+Số lượng kiến: 15
+Alpha: 1.0
+Beta: 2.0
+Rho: 0.3
+Q: 100.0
+Số vòng lặp: 50
+Min-Max ACO: False
+Tìm kiếm cục bộ: True
+Số kiến ưu tú: 2
+
+THAM SỐ GA
+--------------------
+Kích thước quần thể: 50
+Tỷ lệ lai ghép: 0.8
+Tỷ lệ đột biến: 0.1
+Số thế hệ: 50
+Kích thước giải đấu: 5
+Số cá thể ưu tú: 2
+Loại lai ghép: ordered
+Loại đột biến: swap
+Tìm kiếm cục bộ: True
+
+KẾT QUẢ ACO
+--------------------
+Chi phí tốt nhất: 832.56
+Số xe sử dụng: 5
+Thời gian thực thi: 37.19 seconds
+
+KẾT QUẢ GA
+--------------------
+Chi phí tốt nhất: 898.06
+Số xe sử dụng: 5
+Thời gian thực thi: 32.81 seconds
+
+CHI TIẾT TUYẾN ĐƯỜNG ACO
+--------------------
+Tuyến 1: [20, 5, 25, 10, 15, 29, 22, 9, 8, 18, 26] - Nhu cầu: 100 - Khoảng cách: 283.01
+Tuyến 2: [6, 3, 2, 23, 4, 11, 28, 14] - Nhu cầu: 98 - Khoảng cách: 229.21
+Tuyến 3: [27, 24, 1, 12, 30] - Nhu cầu: 98 - Khoảng cách: 113.17
+Tuyến 4: [21, 31, 19, 17, 13, 7] - Nhu cầu: 96 - Khoảng cách: 155.75
+Tuyến 5: [16] - Nhu cầu: 18 - Khoảng cách: 51.42
+
+CHI TIẾT TUYẾN ĐƯỜNG GA
+--------------------
+Tuyến 1: [24, 29, 15, 10, 25, 5, 20] - Nhu cầu: 95 - Khoảng cách: 199.09
+Tuyến 2: [14, 22, 9, 8, 11, 28, 23, 3, 6, 26, 30] - Nhu cầu: 100 - Khoảng cách: 251.74
+Tuyến 3: [1, 21, 31, 19, 17, 7] - Nhu cầu: 99 - Khoảng cách: 156.33
+Tuyến 4: [27, 18, 4, 2, 13, 16] - Nhu cầu: 95 - Khoảng cách: 233.23
+Tuyến 5: [12] - Nhu cầu: 21 - Khoảng cách: 57.69
+
+SO SÁNH KẾT QUẢ
+--------------------
+Chênh lệch chi phí: 65.50 (ACO tốt hơn)
+Chênh lệch thời gian: 4.39 seconds
+Thuật toán tốt hơn: ACO

@@ -1,0 +1,75 @@
+KẾT QUẢ SO SÁNH THUẬT TOÁN CVRP
+========================================
+
+THÔNG TIN BÀI TOÁN
+--------------------
+Số điểm giao hàng: 100
+Sức chứa xe: 200
+
+THAM SỐ ACO
+--------------------
+Số lượng kiến: 60
+Alpha: 1.0
+Beta: 3.5
+Rho: 0.15
+Q: 180.0
+Số vòng lặp: 180
+Min-Max ACO: True
+Tìm kiếm cục bộ: True
+Số kiến ưu tú: 4
+
+THAM SỐ GA
+--------------------
+Kích thước quần thể: 130
+Tỷ lệ lai ghép: 0.8
+Tỷ lệ đột biến: 0.12
+Số thế hệ: 250
+Kích thước giải đấu: 6
+Số cá thể ưu tú: 7
+Loại lai ghép: ordered
+Loại đột biến: inversion
+Tìm kiếm cục bộ: True
+
+KẾT QUẢ ACO
+--------------------
+Chi phí tốt nhất: 924.12
+Số xe sử dụng: 10
+Thời gian thực thi: 502.09 seconds
+
+KẾT QUẢ GA
+--------------------
+Chi phí tốt nhất: 1584.58
+Số xe sử dụng: 10
+Thời gian thực thi: 494.36 seconds
+
+CHI TIẾT TUYẾN ĐƯỜNG ACO
+--------------------
+Tuyến 1: [24, 22, 21, 20, 49, 52, 50, 48, 45, 46, 44, 40, 41, 42, 43] - Nhu cầu: 200 - Khoảng cách: 80.11
+Tuyến 2: [69, 68, 64, 61, 72, 74, 62, 66, 63, 65, 67] - Nhu cầu: 200 - Khoảng cách: 60.85
+Tuyến 3: [75, 5, 3, 7, 8, 9, 11, 10, 26, 28, 30, 27, 25] - Nhu cầu: 200 - Khoảng cách: 74.04
+Tuyến 4: [47, 51, 31, 35, 33, 37, 38, 39, 36, 34, 29] - Nhu cầu: 200 - Khoảng cách: 105.74
+Tuyến 5: [23, 17, 18, 19, 15, 16, 14, 12, 13] - Nhu cầu: 200 - Khoảng cách: 99.61
+Tuyến 6: [99, 100, 97, 93, 92, 94, 95, 96, 98, 91] - Nhu cầu: 200 - Khoảng cách: 102.63
+Tuyến 7: [1, 4, 6, 2, 88, 85, 84, 82, 83, 89, 90] - Nhu cầu: 200 - Khoảng cách: 100.38
+Tuyến 8: [59, 60, 58, 56, 53, 54, 55, 57] - Nhu cầu: 200 - Khoảng cách: 101.88
+Tuyến 9: [86, 87, 81, 78, 76, 71, 70, 73, 77, 79, 80] - Nhu cầu: 180 - Khoảng cách: 135.62
+Tuyến 10: [32] - Nhu cầu: 30 - Khoảng cách: 63.25
+
+CHI TIẾT TUYẾN ĐƯỜNG GA
+--------------------
+Tuyến 1: [23, 13, 28, 52, 43, 40, 57, 66, 84, 88, 89] - Nhu cầu: 200 - Khoảng cách: 189.48
+Tuyến 2: [12, 14, 16, 15, 17, 18, 36, 32, 29] - Nhu cầu: 200 - Khoảng cách: 129.30
+Tuyến 3: [8, 2, 97, 96, 63, 74, 69] - Nhu cầu: 200 - Khoảng cách: 122.48
+Tuyến 4: [79, 77, 80, 54, 56, 60, 41, 46, 25] - Nhu cầu: 200 - Khoảng cách: 181.58
+Tuyến 5: [73, 70, 78, 83, 95, 92, 93, 100, 98] - Nhu cầu: 200 - Khoảng cách: 180.17
+Tuyến 6: [90, 85, 86, 87, 72, 59, 47, 31, 35, 37, 39, 19, 9, 4] - Nhu cầu: 200 - Khoảng cách: 228.88
+Tuyến 7: [22, 27, 51, 48, 45, 44, 68, 64, 81, 76, 71, 82, 75, 3] - Nhu cầu: 200 - Khoảng cách: 188.79
+Tuyến 8: [10, 11, 7, 5, 1, 99, 94, 91, 61, 55, 53, 58, 50, 49, 21] - Nhu cầu: 200 - Khoảng cách: 205.74
+Tuyến 9: [20, 24, 26, 30, 34, 38, 33, 42, 62, 65, 67] - Nhu cầu: 190 - Khoảng cách: 120.16
+Tuyến 10: [6] - Nhu cầu: 20 - Khoảng cách: 38.00
+
+SO SÁNH KẾT QUẢ
+--------------------
+Chênh lệch chi phí: 660.46 (ACO tốt hơn)
+Chênh lệch thời gian: 7.73 seconds
+Thuật toán tốt hơn: ACO

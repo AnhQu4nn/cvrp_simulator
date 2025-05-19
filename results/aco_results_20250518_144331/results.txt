@@ -1,0 +1,30 @@
+Bài toán CVRP - Kết quả từ Ant Colony Optimization
+Số khách hàng: 15
+Trọng lượng xe: 100
+
+THAM SỐ THUẬT TOÁN
+Số lượng kiến: 20
+Alpha: 1.0
+Beta: 2.0
+Rho: 0.5
+Q: 100.0
+Số vòng lặp: 100
+
+THAM SỐ NÂNG CAO
+MIN-MAX ACO: False
+Tìm kiếm cục bộ: False
+Số kiến ưu tú: 0
+Pheromone ban đầu: 1.0
+Tỷ lệ min/max: 0.5
+
+KẾT QUẢ
+Chi phí tốt nhất: 986.39
+Số lượng tuyến: 4
+Thời gian thực thi: 19.69 giây
+
+Giải pháp chi tiết:
+Tuyến 1: 0 → 9 → 1 → 14 → 12 → 0
+Tuyến 2: 0 → 2 → 10 → 3 → 0
+Tuyến 3: 0 → 5 → 15 → 8 → 6 → 0
+Tuyến 4: 0 → 13 → 11 → 7 → 4 → 0
+
